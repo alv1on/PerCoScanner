@@ -6,7 +6,7 @@ enum ApiConfig {
         static let login = "\(baseURL)/account/login"
     }
     
-    enum User {
-        static let profile = "\(baseURL)/user/profile"
+    enum OwnDate {
+        static let ownDate = "\(baseURL)/ownDate/"
     }
 }

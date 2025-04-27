@@ -1,7 +1,6 @@
-// Кастомный View для плиток-кнопок
 import SwiftUI
 
-struct ActionTile: View {
+struct ActionTileView: View {
     let icon: String
     let label: String
     let action: () -> Void
