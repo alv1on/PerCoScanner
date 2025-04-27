@@ -1,5 +1,6 @@
 // AuthService.swift
 import Foundation
+import JWTDecode
 
 class AuthService: ObservableObject {
     static let shared = AuthService()
@@ -7,7 +8,33 @@ class AuthService: ObservableObject {
     @Published var errorMessage: String?
     @Published var currentUser: String?
     
-    private init() {} 
+    private let tokenKey = "x-access-token"
+    private let userDefaults = UserDefaults.standard
+    
+    private init() {
+           checkToken()
+       }
+       
+       func checkToken() {
+           if let token = getStoredToken(), isTokenValid(token) {
+               isAuthenticated = true
+           } else {
+               logout()
+           }
+       }
+    
+    private func saveToken(_ token: String) {
+        userDefaults.set(token, forKey: tokenKey)
+    }
+    
+    private func removeToken() {
+        userDefaults.removeObject(forKey: tokenKey)
+    }
+    
+    func getStoredToken() -> String? {
+        return userDefaults.string(forKey: tokenKey)
+    }
+    
     
     func login(login: String, password: String, completion: @escaping (Bool) -> Void) {
         guard let url = URL(string: ApiConfig.Auth.login) else {
@@ -38,6 +65,12 @@ class AuthService: ObservableObject {
                 }
                 
                 if httpResponse.statusCode == 200 {
+                    if let setCookieHeader = httpResponse.allHeaderFields["Set-Cookie"] as? String,
+                       let range = setCookieHeader.range(of: "X-Access-Token=([^;]+)", options: .regularExpression) {
+                        let token = String(setCookieHeader[range].dropFirst("X-Access-Token=".count))
+                        self.saveToken(token)
+                    }
+                    
                     self.currentUser = login
                     self.isAuthenticated = true
                     completion(true)
@@ -48,7 +81,18 @@ class AuthService: ObservableObject {
             }
         }.resume()
     }
+    
+    func isTokenValid(_ token: String) -> Bool {
+            do {
+                let jwt = try decode(jwt: token)
+                return !jwt.expired
+            } catch {
+                return false
+            }
+        }
+    
     func logout() {
+        removeToken()
         self.isAuthenticated = false
         self.currentUser = nil
     }

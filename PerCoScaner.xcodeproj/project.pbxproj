@@ -6,27 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXContainerItemProxy section */
-		CBFD17C22DBCC89E00DB924B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = CBFD17A92DBCC89D00DB924B /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = CBFD17B02DBCC89D00DB924B;
-			remoteInfo = Alvion;
-		};
-		CBFD17CC2DBCC89E00DB924B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = CBFD17A92DBCC89D00DB924B /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = CBFD17B02DBCC89D00DB924B;
-			remoteInfo = Alvion;
-		};
-/* End PBXContainerItemProxy section */
+/* Begin PBXBuildFile section */
+		CBD14EC12DBE67940027CBC5 /* JWTDecode in Frameworks */ = {isa = PBXBuildFile; productRef = CBD14EC02DBE67940027CBC5 /* JWTDecode */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		CBFD17B12DBCC89D00DB924B /* PerCoScaner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PerCoScaner.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		CBFD17C12DBCC89E00DB924B /* PerCoScanerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PerCoScanerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		CBFD17CB2DBCC89E00DB924B /* PerCoScanerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PerCoScanerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -42,20 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		CBFD17BE2DBCC89E00DB924B /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		CBFD17C82DBCC89E00DB924B /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
+				CBD14EC12DBE67940027CBC5 /* JWTDecode in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,8 +46,6 @@
 			isa = PBXGroup;
 			children = (
 				CBFD17B12DBCC89D00DB924B /* PerCoScaner.app */,
-				CBFD17C12DBCC89E00DB924B /* PerCoScanerTests.xctest */,
-				CBFD17CB2DBCC89E00DB924B /* PerCoScanerUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,50 +70,11 @@
 			);
 			name = PerCoScaner;
 			packageProductDependencies = (
+				CBD14EC02DBE67940027CBC5 /* JWTDecode */,
 			);
 			productName = Alvion;
 			productReference = CBFD17B12DBCC89D00DB924B /* PerCoScaner.app */;
 			productType = "com.apple.product-type.application";
-		};
-		CBFD17C02DBCC89E00DB924B /* PerCoScanerTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = CBFD17D82DBCC89E00DB924B /* Build configuration list for PBXNativeTarget "PerCoScanerTests" */;
-			buildPhases = (
-				CBFD17BD2DBCC89E00DB924B /* Sources */,
-				CBFD17BE2DBCC89E00DB924B /* Frameworks */,
-				CBFD17BF2DBCC89E00DB924B /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				CBFD17C32DBCC89E00DB924B /* PBXTargetDependency */,
-			);
-			name = PerCoScanerTests;
-			packageProductDependencies = (
-			);
-			productName = AlvionTests;
-			productReference = CBFD17C12DBCC89E00DB924B /* PerCoScanerTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		CBFD17CA2DBCC89E00DB924B /* PerCoScanerUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = CBFD17DB2DBCC89E00DB924B /* Build configuration list for PBXNativeTarget "PerCoScanerUITests" */;
-			buildPhases = (
-				CBFD17C72DBCC89E00DB924B /* Sources */,
-				CBFD17C82DBCC89E00DB924B /* Frameworks */,
-				CBFD17C92DBCC89E00DB924B /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				CBFD17CD2DBCC89E00DB924B /* PBXTargetDependency */,
-			);
-			name = PerCoScanerUITests;
-			packageProductDependencies = (
-			);
-			productName = AlvionUITests;
-			productReference = CBFD17CB2DBCC89E00DB924B /* PerCoScanerUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
@@ -158,14 +89,6 @@
 					CBFD17B02DBCC89D00DB924B = {
 						CreatedOnToolsVersion = 16.2;
 					};
-					CBFD17C02DBCC89E00DB924B = {
-						CreatedOnToolsVersion = 16.2;
-						TestTargetID = CBFD17B02DBCC89D00DB924B;
-					};
-					CBFD17CA2DBCC89E00DB924B = {
-						CreatedOnToolsVersion = 16.2;
-						TestTargetID = CBFD17B02DBCC89D00DB924B;
-					};
 				};
 			};
 			buildConfigurationList = CBFD17AC2DBCC89D00DB924B /* Build configuration list for PBXProject "PerCoScaner" */;
@@ -177,34 +100,21 @@
 			);
 			mainGroup = CBFD17A82DBCC89D00DB924B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CBD14EBF2DBE67940027CBC5 /* XCRemoteSwiftPackageReference "JWTDecode" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CBFD17B22DBCC89D00DB924B /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				CBFD17B02DBCC89D00DB924B /* PerCoScaner */,
-				CBFD17C02DBCC89E00DB924B /* PerCoScanerTests */,
-				CBFD17CA2DBCC89E00DB924B /* PerCoScanerUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		CBFD17AF2DBCC89D00DB924B /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		CBFD17BF2DBCC89E00DB924B /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		CBFD17C92DBCC89E00DB924B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -221,34 +131,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		CBFD17BD2DBCC89E00DB924B /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		CBFD17C72DBCC89E00DB924B /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		CBFD17C32DBCC89E00DB924B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = CBFD17B02DBCC89D00DB924B /* PerCoScaner */;
-			targetProxy = CBFD17C22DBCC89E00DB924B /* PBXContainerItemProxy */;
-		};
-		CBFD17CD2DBCC89E00DB924B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = CBFD17B02DBCC89D00DB924B /* PerCoScaner */;
-			targetProxy = CBFD17CC2DBCC89E00DB924B /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		CBFD17D32DBCC89E00DB924B /* Debug */ = {
@@ -436,74 +319,6 @@
 			};
 			name = Release;
 		};
-		CBFD17D92DBCC89E00DB924B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Shate.AlvionTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PerCoScaner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PerCoScaner";
-			};
-			name = Debug;
-		};
-		CBFD17DA2DBCC89E00DB924B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Shate.AlvionTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PerCoScaner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PerCoScaner";
-			};
-			name = Release;
-		};
-		CBFD17DC2DBCC89E00DB924B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Shate.AlvionUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Alvion;
-			};
-			name = Debug;
-		};
-		CBFD17DD2DBCC89E00DB924B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Shate.AlvionUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Alvion;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -525,25 +340,26 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		CBFD17D82DBCC89E00DB924B /* Build configuration list for PBXNativeTarget "PerCoScanerTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				CBFD17D92DBCC89E00DB924B /* Debug */,
-				CBFD17DA2DBCC89E00DB924B /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		CBFD17DB2DBCC89E00DB924B /* Build configuration list for PBXNativeTarget "PerCoScanerUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				CBFD17DC2DBCC89E00DB924B /* Debug */,
-				CBFD17DD2DBCC89E00DB924B /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CBD14EBF2DBE67940027CBC5 /* XCRemoteSwiftPackageReference "JWTDecode" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/auth0/JWTDecode.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CBD14EC02DBE67940027CBC5 /* JWTDecode */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CBD14EBF2DBE67940027CBC5 /* XCRemoteSwiftPackageReference "JWTDecode" */;
+			productName = JWTDecode;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CBFD17A92DBCC89D00DB924B /* Project object */;
 }

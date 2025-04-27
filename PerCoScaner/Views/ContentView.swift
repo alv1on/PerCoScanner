@@ -67,7 +67,7 @@ struct ContentView: View {
                 }
             }
             .padding()
-            .navigationTitle("PerCo Scanner")
+            .navigationTitle("PerCo")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showLogoutAlert = true }) {

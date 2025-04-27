@@ -3,17 +3,15 @@ import SwiftUI
 @main
 struct PerCoScanerApp: App {
     @StateObject var authService = AuthService.shared
-        
+    
     var body: some Scene {
-            WindowGroup {
-                if authService.isAuthenticated {
-                    ContentView()
-                        .transition(.opacity)
-                } else {
-                    LoginView()
-                        .transition(.opacity)
-                }
+        WindowGroup {
+            if authService.isAuthenticated {
+                ContentView()
+            } else {
+                LoginView()
             }
-            .environmentObject(authService)
         }
+        .environmentObject(authService)
+    }
 }
