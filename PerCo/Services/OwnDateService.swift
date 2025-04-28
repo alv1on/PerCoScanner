@@ -10,21 +10,16 @@ class OwnDateService: ObservableObject {
         self.appState = appState
     }
     
-    func createOwnDate(type: String) {
+    func createOwnDate(type: String, hours: Int, minutes: Int, isRemoteWork: Bool) {
         appState.isLoading = true
         
-        let currentDate = ISO8601DateFormatter().string(from: Date())
-        
-        let requestBody: [String: Any] = [
-            "dateTimes": [currentDate],
-            "type": type,
-            "hours": 10,
-            "minutes": 0,
-            "comment": "",
-            "isRemoteWork": false,
-            "emails": []
-        ]
-        
+        let ownDateRequest = OwnDate(
+            type: type,
+            hours: hours,
+            minutes: minutes,
+            isRemoteWork: isRemoteWork
+        )
+
         guard let url = URL(string: ApiConfig.OwnDate.ownDate),
               let token = authService.getStoredToken() else {
             appState.alertMessage = "Ошибка сервера"
@@ -39,7 +34,7 @@ class OwnDateService: ObservableObject {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            request.httpBody = try JSONEncoder().encode(ownDateRequest)
         } catch {
             appState.alertMessage = "Ошибка формирования запроса"
             appState.showAlert = true
@@ -65,7 +60,11 @@ class OwnDateService: ObservableObject {
                 
                 if (200...299).contains(httpResponse.statusCode) {
                     self.appState.alertMessage = "Событие успешно создано"
-                } else {
+                } else if (httpResponse.statusCode == 401) {
+                    self.authService.logout()
+                    self.appState.alertMessage = "Ошибка авторизации"
+                }
+                else{
                     self.appState.alertMessage = "Ошибка сервера: \(httpResponse.statusCode)"
                 }
                 self.appState.showAlert = true

@@ -7,6 +7,11 @@ struct ContentView: View {
     @State private var isShowingScanner = false
     @State private var scannedCode: String?
     @State private var showLogoutAlert = false
+    @State private var selectedHours = 0
+    @State private var selectedMinutes = 0
+    @State private var isShowingTimePicker = false
+    @State private var isRemoteWork = false
+    @State private var timePickerType: String?
     
     var body: some View {
         NavigationStack {
@@ -16,9 +21,6 @@ struct ContentView: View {
                     VStack {
                         Text("Добро пожаловать")
                             .font(.title)
-                        Text(authService.currentUser ?? "")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
                     }
                     .padding(.top, 20)
                     
@@ -28,7 +30,13 @@ struct ContentView: View {
                         ActionTileView(
                             icon: "calendar.badge.plus",
                             label: "Начать день",
-                            action: { ownDateService.createOwnDate(type: "EnterManual") },
+                            action: {
+                                timePickerType = "EnterManual"
+                                selectedHours = 10
+                                selectedMinutes = 0
+                                isRemoteWork = false
+                                isShowingTimePicker = true
+                            },
                             isLoading: appState.isLoading
                         )
                         // Кнопка "QR сканер"
@@ -41,7 +49,13 @@ struct ContentView: View {
                         ActionTileView(
                             icon: "calendar.badge.checkmark",
                             label: "Закончить день",
-                            action: { ownDateService.createOwnDate(type: "ExitManual") },
+                            action: {
+                                timePickerType = "ExitManual"
+                                selectedHours = 18
+                                selectedMinutes = 30
+                                isRemoteWork = false 
+                                isShowingTimePicker = true
+                            },
                             isLoading: appState.isLoading
                         )
                         // Кнопка "Настройки"
@@ -104,6 +118,24 @@ struct ContentView: View {
                     onDismiss: { isShowingScanner = false }
                 )
                 .edgesIgnoringSafeArea(.all)
+            }.sheet(isPresented: $isShowingTimePicker) {
+                TimePickerView(
+                    hours: $selectedHours,
+                    minutes: $selectedMinutes,
+                    isRemoteWork: $isRemoteWork,
+                    onCancel: { isShowingTimePicker = false },
+                    onConfirm: {
+                        if let type = timePickerType {
+                            ownDateService.createOwnDate(
+                                type: type,
+                                hours: selectedHours,
+                                minutes: selectedMinutes,
+                                isRemoteWork: isRemoteWork
+                            )
+                        }
+                        isShowingTimePicker = false
+                    }
+                )
             }
         }
     }

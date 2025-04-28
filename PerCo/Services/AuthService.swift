@@ -6,7 +6,6 @@ class AuthService: ObservableObject {
     static let shared = AuthService()
     @Published var isAuthenticated = false
     @Published var errorMessage: String?
-    @Published var currentUser: String?
     
     private let tokenKey = "x-access-token"
     private let userDefaults = UserDefaults.standard
@@ -71,7 +70,6 @@ class AuthService: ObservableObject {
                         self.saveToken(token)
                     }
                     
-                    self.currentUser = login
                     self.isAuthenticated = true
                     completion(true)
                 } else {
@@ -94,6 +92,5 @@ class AuthService: ObservableObject {
     func logout() {
         removeToken()
         self.isAuthenticated = false
-        self.currentUser = nil
     }
 }
