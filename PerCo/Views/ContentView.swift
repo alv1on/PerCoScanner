@@ -29,6 +29,13 @@ struct ContentView: View {
                                 .font(.headline)
                                 .foregroundColor(.secondary)
                         }
+                        HStack(spacing: 4) {
+                            Image(systemName: "calendar")
+                            Text(Date().formatted(date: .abbreviated, time: .omitted))
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .padding(.top, 2)
                     }
                     .padding(.top, 20)
                     

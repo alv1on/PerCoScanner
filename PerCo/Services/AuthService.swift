@@ -9,14 +9,21 @@ class AuthService: ObservableObject {
     @Published var errorMessage: String?
     @Published var userName: String = ""
     
-    private let tokenKey = "x-access-token"
-    private let loginKey = "saved-login"
-    private let passwordKey = "saved-password"
+    let tokenKey = "x-access-token"
+    let loginKey = "saved-login"
+    let passwordKey = "saved-password"
     
-    private init() {
+    private lazy var httpClient: HTTPClient = {
+        HTTPClient(tokenProvider: { [weak self] in
+            self?.getKey(self?.tokenKey ?? "")
+        }, unauthorizedHandler: { [weak self] in
+            self?.logout()
+        })
+    }()
+    
+    init() {
         checkToken()
     }
-    
     // MARK: - Authentication State
     func checkToken() {
         if let token = getKey(tokenKey), isTokenValid(token) {
@@ -49,6 +56,7 @@ class AuthService: ObservableObject {
     func removeKey(_ value: String) {
         _ = KeychainService.delete(key: value)
     }
+    
     func getKey(_ value: String) -> String? {
         return KeychainService.load(key: value)
     }
@@ -63,14 +71,14 @@ class AuthService: ObservableObject {
         var error: NSError?
         
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
-            let reason = "Authenticate to access your account"
+            let reason = "Авторизуйтесь для доступа к аккаунта"
             context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
                                  localizedReason: reason) { success, error in
                 DispatchQueue.main.async {
                     if success {
                         completion(true)
                     } else {
-                        self.errorMessage = error?.localizedDescription ?? "Ошибка аутентификации"
+                        self.errorMessage = error?.localizedDescription ?? "Ошибка авторизации"
                         completion(false)
                     }
                 }
@@ -81,7 +89,6 @@ class AuthService: ObservableObject {
         }
     }
     
-    // MARK: - Network Operations
     func login(login: String, password: String, completion: @escaping (Bool) -> Void) {
         guard let url = URL(string: ApiConfig.Auth.login) else {
             errorMessage = "Некорректный URL"
@@ -89,37 +96,24 @@ class AuthService: ObservableObject {
             return
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
         let body = ["login": login, "password": password]
-        request.httpBody = try? JSONEncoder().encode(body)
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        httpClient.request(url, method: "POST", body: body) { [weak self] result in
             DispatchQueue.main.async {
-                if let error = error {
-                    self.errorMessage = error.localizedDescription
-                    completion(false)
-                    return
-                }
+                guard let self = self else { return }
                 
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    self.errorMessage = "Ошибка сервера"
+                switch result {
+                case .success(let (data, response)):
+                    self.processLoginResponse(data: data, response: response, login: login, completion: completion)
+                case .failure(let error):
+                    self.handleLoginError(error)
                     completion(false)
-                    return
-                }
-                
-                if httpResponse.statusCode == 200 {
-                    self.processSuccessfulLogin(response: httpResponse, login: login, completion: completion)
-                } else {
-                    self.processFailedLogin(statusCode: httpResponse.statusCode, completion: completion)
                 }
             }
-        }.resume()
+        }
     }
     
-    private func processSuccessfulLogin(response: HTTPURLResponse, login: String, completion: @escaping (Bool) -> Void) {
+    private func processLoginResponse(data: Data, response: HTTPURLResponse, login: String, completion: @escaping (Bool) -> Void) {
         if let setCookieHeader = response.allHeaderFields["Set-Cookie"] as? String,
            let range = setCookieHeader.range(of: "X-Access-Token=([^;]+)", options: .regularExpression) {
             let token = String(setCookieHeader[range].dropFirst("X-Access-Token=".count))
@@ -129,7 +123,7 @@ class AuthService: ObservableObject {
                 self.isAuthenticated = true
                 self.fetchUserInfo(completion: completion)
             } else {
-                self.errorMessage = "Ошибка сохранение токена"
+                self.errorMessage = "Ошибка сохранения токена"
                 completion(false)
             }
         } else {
@@ -138,69 +132,72 @@ class AuthService: ObservableObject {
         }
     }
     
-    private func processFailedLogin(statusCode: Int, completion: @escaping (Bool) -> Void) {
-        errorMessage = statusCode == 401 ? "Неправильный логин или пароль" : "Ошибка сервера: \(statusCode)"
-        completion(false)
+    private func handleLoginError(_ error: Error) {
+        if let networkError = error as? NetworkError {
+            switch networkError {
+            case .unauthorized:
+                errorMessage = "Неправильный логин или пароль"
+            case .serverError(let code):
+                errorMessage = "Ошибка сервера: \(code)"
+            default:
+                errorMessage = "Ошибка сети"
+            }
+        } else {
+            errorMessage = error.localizedDescription
+        }
     }
     
     func fetchUserInfo(completion: @escaping (Bool) -> Void) {
-        guard let url = URL(string: ApiConfig.Account.userInfo),
-              let token = getKey(tokenKey) else {
-            errorMessage = "Ошибка авторизации"
+        guard let url = URL(string: ApiConfig.Account.userInfo) else {
+            errorMessage = "Некорректный URL"
             completion(false)
             return
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        httpClient.request(url) { [weak self] result in
             DispatchQueue.main.async {
-                if let error = error {
-                    self.errorMessage = error.localizedDescription
-                    completion(false)
-                    return
-                }
+                guard let self = self else { return }
                 
-                self.processUserInfoResponse(data: data, response: response, completion: completion)
+                switch result {
+                case .success((let data, _)):
+                    self.processUserInfo(data: data, completion: completion)
+                case .failure(let error):
+                    self.handleUserInfoError(error)
+                    completion(false)
+                }
             }
-        }.resume()
+        }
     }
     
-    private func processUserInfoResponse(data: Data?, response: URLResponse?, completion: @escaping (Bool) -> Void) {
-        guard let httpResponse = response as? HTTPURLResponse else {
-            errorMessage = "Ошибка сервера"
-            completion(false)
-            return
-        }
-        
-        switch httpResponse.statusCode {
-        case 200:
-            if let data = data, let name = self.extractUserName(from: data) {
+    private func processUserInfo(data: Data, completion: @escaping (Bool) -> Void) {
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let name = json["name"] as? String {
                 self.userName = name
                 completion(true)
             } else {
-                errorMessage = "Ошибка загрузки данных"
+                errorMessage = "Ошибка загрузки данных пользователя"
                 completion(false)
             }
-        case 401:
-            logout()
-            completion(false)
-        default:
-            errorMessage = "Ошибка сервера: \(httpResponse.statusCode)"
+        } catch {
+            errorMessage = "Ошибка обработки данных"
             completion(false)
         }
     }
     
-    private func extractUserName(from data: Data) -> String? {
-        do {
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                return json["name"] as? String
+    private func handleUserInfoError(_ error: Error) {
+        if let networkError = error as? NetworkError {
+            switch networkError {
+            case .unauthorized:
+                logout()
+                errorMessage = "Сессия истекла"
+            case .serverError(let code):
+                errorMessage = "Ошибка сервера: \(code)"
+            default:
+                errorMessage = "Ошибка приложения"
             }
-        } catch {
-            errorMessage = "Ошибка загрузки данных пользователя"
+        } else {
+            errorMessage = error.localizedDescription
         }
-        return nil
     }
 }

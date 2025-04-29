@@ -49,7 +49,7 @@ struct LoginView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isLoading || login.isEmpty || password.isEmpty)
+                .disabled(isLoading || login.isEmpty || password.count < 8)
                 .padding(.top, 20)
                 
                 if authService.hasSavedLogin() {
@@ -65,19 +65,15 @@ struct LoginView: View {
                 }
             }
             .padding()
-            .navigationDestination(isPresented: $authService.isAuthenticated) {
-                ContentView()
-                    .environmentObject(authService)
-                    .environmentObject(OwnDateService(authService: authService, appState: AppState()))
-            }
             .navigationTitle("Авторизация")
             .onAppear {
-                if let savedLogin = authService.getKey(loginKey) {
+                if let savedLogin = authService.getKey(authService.loginKey) {
                     login = savedLogin
                 }
             }
         }
     }
+    
     
     private func performLogin() {
         isLoading = true

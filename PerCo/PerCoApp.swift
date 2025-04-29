@@ -2,28 +2,52 @@ import SwiftUI
 
 @main
 struct PerCoApp: App {
-    @StateObject var authService = AuthService.shared
-    @StateObject var appState = AppState()
-    @StateObject var ownDateService: OwnDateService
+    @StateObject private var authService = AuthService()
+    @StateObject private var appState = AppState()
+    @State private var showSplash = true
     
-    init() {
-        let auth = AuthService.shared
-        let state = AppState()
-        _authService = StateObject(wrappedValue: auth)
-        _appState = StateObject(wrappedValue: state)
-        _ownDateService = StateObject(wrappedValue: OwnDateService(authService: auth, appState: state))
+    private var httpClient: HTTPClient {
+        HTTPClient(
+            tokenProvider: { [weak authService] in
+                authService?.getKey("x-access-token")
+            },
+            unauthorizedHandler: { authService.logout() }
+        )
+    }
+    
+    private var ownDateService: OwnDateService {
+        OwnDateService(
+            authService: authService,
+            appState: appState,
+            httpClient: httpClient
+        )
     }
     
     var body: some Scene {
         WindowGroup {
-            if authService.isAuthenticated {
-                ContentView()
-                    .environmentObject(authService)
-                    .environmentObject(appState)
-                    .environmentObject(ownDateService)
-            } else {
-                LoginView()
-                    .environmentObject(authService)
+            ZStack {
+                if showSplash {
+                    SplashView()
+                        .transition(.opacity)
+                } else {
+                    if authService.isAuthenticated {
+                        ContentView()
+                            .environmentObject(authService)
+                            .environmentObject(appState)
+                            .environmentObject(ownDateService)
+                    } else {
+                        LoginView()
+                            .environmentObject(authService)
+                    }
+                }
+            }
+            .onAppear {
+                // Задержка для демонстрации splash screen (можно заменить на реальную загрузку данных)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation {
+                        showSplash = false
+                    }
+                }
             }
         }
     }

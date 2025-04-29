@@ -15,7 +15,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		CBFD17B32DBCC89D00DB924B /* PerCo */ = {
+		CBC176132DC13307001DBE71 /* PerCo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PerCo;
 			sourceTree = "<group>";
@@ -37,7 +37,7 @@
 		CBFD17A82DBCC89D00DB924B = {
 			isa = PBXGroup;
 			children = (
-				CBFD17B32DBCC89D00DB924B /* PerCo */,
+				CBC176132DC13307001DBE71 /* PerCo */,
 				CBFD17B22DBCC89D00DB924B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -66,7 +66,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				CBFD17B32DBCC89D00DB924B /* PerCo */,
+				CBC176132DC13307001DBE71 /* PerCo */,
 			);
 			name = PerCo;
 			packageProductDependencies = (

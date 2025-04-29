@@ -4,41 +4,27 @@ import SwiftUI
 class OwnDateService: ObservableObject {
     private let authService: AuthService
     private let appState: AppState
+    private let httpClient: HTTPClient
     @Published var userEmails: [String] = []
     
     private let tokenKey = "x-access-token"
     
-    init(authService: AuthService, appState: AppState) {
+    init(authService: AuthService, appState: AppState, httpClient : HTTPClient) {
         self.authService = authService
         self.appState = appState
+        self.httpClient = httpClient
     }
     
     
     func fetchUserEmails(completion: @escaping (Result<[String], Error>) -> Void) {
-        guard let url = URL(string: ApiConfig.User.userEmails),
-              let token = authService.getKey(tokenKey) else {
-            completion(.failure(NSError(domain: "Invalid URL or token", code: 0)))
+        guard let url = URL(string: ApiConfig.User.userEmails) else {
+            completion(.failure(NetworkError.invalidURL))
             return
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    completion(.failure(error))
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse,
-                      (200...299).contains(httpResponse.statusCode),
-                      let data = data else {
-                    completion(.failure(NSError(domain: "Invalid response", code: 0)))
-                    return
-                }
-                
+        httpClient.request(url) { result in
+            switch result {
+            case .success((let data, _)):
                 do {
                     let emails = try JSONDecoder().decode([String].self, from: data)
                     self.userEmails = emails
@@ -46,8 +32,10 @@ class OwnDateService: ObservableObject {
                 } catch {
                     completion(.failure(error))
                 }
+            case .failure(let error):
+                completion(.failure(error))
             }
-        }.resume()
+        }
     }
     
     func createOwnDate(type: String, hours: Int, minutes: Int, isRemoteWork: Bool, selectedEmails: [String]) {
@@ -61,55 +49,38 @@ class OwnDateService: ObservableObject {
             emails: selectedEmails
         )
         
-        guard let url = URL(string: ApiConfig.OwnDate.ownDate),
-              let token = authService.getKey(tokenKey) else {
-            appState.alertMessage = "Ошибка сервера"
-            appState.showAlert = true
-            appState.isLoading = false
+        guard let url = URL(string: ApiConfig.OwnDate.ownDate) else {
+            handleError(message: "Ошибка сервера")
             return
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        do {
-            request.httpBody = try JSONEncoder().encode(ownDateRequest)
-        } catch {
-            appState.alertMessage = "Ошибка формирования запроса"
-            appState.showAlert = true
-            appState.isLoading = false
-            return
-        }
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        httpClient.request(url, method: "POST", body: ownDateRequest) { result in
             DispatchQueue.main.async {
                 self.appState.isLoading = false
                 
-                if let error = error {
-                    self.appState.alertMessage = "Ошибка: \(error.localizedDescription)"
-                    self.appState.showAlert = true
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    self.appState.alertMessage = "Некорректный ответ сервера"
-                    self.appState.showAlert = true
-                    return
-                }
-                
-                if (200...299).contains(httpResponse.statusCode) {
+                switch result {
+                case .success:
                     self.appState.alertMessage = "Событие успешно создано"
-                } else if (httpResponse.statusCode == 401) {
-                    self.appState.alertMessage = "Ошибка сервера"
-                    self.authService.logout()
-                }
-                else{
-                    self.appState.alertMessage = "Ошибка сервера: \(httpResponse.statusCode)"
+                case .failure(let error):
+                    self.handleNetworkError(error)
                 }
                 self.appState.showAlert = true
             }
-        }.resume()
+        }
+    }
+    private func handleNetworkError(_ error: Error) {
+        switch error {
+        case NetworkError.unauthorized:
+            appState.alertMessage = "Сессия истекла"
+            authService.logout()
+        default:
+            appState.alertMessage = "Ошибка: \(error.localizedDescription)"
+        }
+    }
+    
+    private func handleError(message: String) {
+        appState.isLoading = false
+        appState.alertMessage = message
+        appState.showAlert = true
     }
 }
