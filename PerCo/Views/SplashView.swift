@@ -10,20 +10,38 @@ struct SplashView: View {
                 ContentView()
             } else {
                 ZStack {
+                    // Черный фон на весь экран
                     Color.black.ignoresSafeArea()
                     
+                    // Основное содержимое
                     VStack {
-                        Image("perco-logo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 100, height: 100)
-                            .foregroundColor(.white)
-                            .scaleEffect(isAnimating ? 1.2 : 0.8)
+                        // Пустое пространство сверху для центрирования
+                        Spacer()
                         
-                        Text("PerCo")
-                            .font(.title)
-                            .foregroundColor(.white)
-                            .padding()
+                        // Центрированный логотип и текст
+                        VStack {
+                            Image("perco-logo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 100, height: 100)
+                                .foregroundColor(.white)
+                                .scaleEffect(isAnimating ? 1.2 : 0.8)
+                            
+                            Text("PerCo")
+                                .font(.title)
+                                .foregroundColor(.white)
+                                .padding(.top, 16)
+                        }
+                        .frame(maxHeight: .infinity)
+                        
+                        Spacer()
+                        
+                        VStack(spacing: 4) {
+                            Text("PerCo Time Tracker")
+                            Text("Copyright © 2020-\(Calendar.current.component(.year, from: Date()))")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.gray)
                     }
                 }
             }
