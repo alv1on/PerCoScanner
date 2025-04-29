@@ -9,4 +9,12 @@ enum ApiConfig {
     enum OwnDate {
         static let ownDate = "\(baseURL)/ownDate/"
     }
+    
+    enum Account {
+        static let userInfo = "\(baseURL)/account/userinfo"
+    }
+    
+    enum User {
+        static let userEmails = "\(baseURL)/user/userEmails"
+    }
 }

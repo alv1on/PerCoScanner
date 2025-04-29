@@ -10,8 +10,11 @@ struct ContentView: View {
     @State private var selectedHours = 0
     @State private var selectedMinutes = 0
     @State private var isShowingTimePicker = false
+    @State private var isShowingOwnTypeList = false
     @State private var isRemoteWork = false
     @State private var timePickerType: String?
+    @State private var selectedEmails: [String] = []
+    @State private var selectedEventType = "OwnExpenses"
     
     var body: some View {
         NavigationStack {
@@ -21,12 +24,16 @@ struct ContentView: View {
                     VStack {
                         Text("Добро пожаловать")
                             .font(.title)
+                        if !authService.userName.isEmpty {
+                            Text(authService.userName)
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .padding(.top, 20)
                     
                     // Плитки с кнопками
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        // Кнопка "Начать рабочий день"
                         ActionTileView(
                             icon: "calendar.badge.plus",
                             label: "Начать день",
@@ -39,13 +46,13 @@ struct ContentView: View {
                             },
                             isLoading: appState.isLoading
                         )
-                        // Кнопка "QR сканер"
+                        
                         ActionTileView(
                             icon: "qrcode.viewfinder",
                             label: "Сканировать",
                             action: { isShowingScanner = true }
                         )
-                        // Кнопка "Закончить день"
+                        
                         ActionTileView(
                             icon: "calendar.badge.checkmark",
                             label: "Закончить день",
@@ -53,21 +60,22 @@ struct ContentView: View {
                                 timePickerType = "ExitManual"
                                 selectedHours = 18
                                 selectedMinutes = 30
-                                isRemoteWork = false 
+                                isRemoteWork = false
                                 isShowingTimePicker = true
                             },
                             isLoading: appState.isLoading
                         )
-                        // Кнопка "Настройки"
                         ActionTileView(
-                            icon: "gearshape",
-                            label: "Настройки",
-                            action: { /* Добавьте действие */ }
+                            icon: "calendar.badge.exclamationmark",
+                            label: "Создать событие",
+                            action: {
+                                isShowingOwnTypeList = true
+                            },
+                            isLoading: appState.isLoading
                         )
                     }
                     .padding(.horizontal)
                     
-                    // Отсканированный код (появляется ниже плиток)
                     if let code = scannedCode {
                         VStack(spacing: 10) {
                             Text("Отсканированный код:")
@@ -94,11 +102,16 @@ struct ContentView: View {
                 }
                 .padding()
             }
+            .refreshable {
+                await refreshData()
+            }
             .navigationTitle("PerCo")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showLogoutAlert = true }) {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, .blue)
                     }
                 }
             }
@@ -118,11 +131,13 @@ struct ContentView: View {
                     onDismiss: { isShowingScanner = false }
                 )
                 .edgesIgnoringSafeArea(.all)
-            }.sheet(isPresented: $isShowingTimePicker) {
+            }
+            .sheet(isPresented: $isShowingTimePicker) {
                 TimePickerView(
                     hours: $selectedHours,
                     minutes: $selectedMinutes,
                     isRemoteWork: $isRemoteWork,
+                    selectedEmails: $selectedEmails,
                     onCancel: { isShowingTimePicker = false },
                     onConfirm: {
                         if let type = timePickerType {
@@ -130,12 +145,45 @@ struct ContentView: View {
                                 type: type,
                                 hours: selectedHours,
                                 minutes: selectedMinutes,
-                                isRemoteWork: isRemoteWork
+                                isRemoteWork: isRemoteWork,
+                                selectedEmails: selectedEmails
                             )
                         }
                         isShowingTimePicker = false
                     }
                 )
+            }
+            .sheet(isPresented: $isShowingOwnTypeList) {
+                EventTypePickerView(
+                    selectedEventType: $selectedEventType,
+                    onCancel: {
+                        isShowingOwnTypeList = false
+                    },
+                    onConfirm: {
+                        ownDateService.createOwnDate(
+                            type: selectedEventType,
+                            hours: selectedHours,
+                            minutes: selectedMinutes,
+                            isRemoteWork: isRemoteWork,
+                            selectedEmails: selectedEmails
+                        )
+                        isShowingOwnTypeList = false
+                    }
+                )
+                .environmentObject(ownDateService)
+            }
+            .onAppear {
+                if authService.isAuthenticated {
+                    authService.fetchUserInfo { _ in }
+                }
+            }
+        }
+    }
+    
+    private func refreshData() async {
+        await withCheckedContinuation { continuation in
+            authService.fetchUserInfo { _ in
+                continuation.resume()
             }
         }
     }

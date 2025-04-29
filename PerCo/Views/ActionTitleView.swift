@@ -13,6 +13,8 @@ struct ActionTileView: View {
                     ProgressView()
                 } else {
                     Image(systemName: icon)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .blue)
                         .font(.system(size: 28))
                 }
                 Text(label)
