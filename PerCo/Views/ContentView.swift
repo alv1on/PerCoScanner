@@ -82,29 +82,6 @@ struct ContentView: View {
                         )
                     }
                     .padding(.horizontal)
-                    
-                    if let code = scannedCode {
-                        VStack(spacing: 10) {
-                            Text("Отсканированный код:")
-                                .font(.headline)
-                            
-                            Text(code)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(10)
-                                .contextMenu {
-                                    Button {
-                                        UIPasteboard.general.string = code
-                                    } label: {
-                                        Label("Копировать", systemImage: "doc.on.doc")
-                                    }
-                                }
-                        }
-                        .padding()
-                        .transition(.slide)
-                    }
-                    
                     Spacer()
                 }
                 .padding()
