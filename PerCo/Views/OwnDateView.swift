@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct TimePickerView: View {
+struct OwnDateView: View {
     @EnvironmentObject var ownDateService: OwnDateService
     @Binding var hours: Int
     @Binding var minutes: Int
@@ -14,22 +14,7 @@ struct TimePickerView: View {
     var body: some View {
         NavigationStack {
             VStack {
-                HStack(spacing: 0) {
-                    Picker("Часы", selection: $hours) {
-                        ForEach(0..<24, id: \.self) { hour in
-                            Text("\(hour) ч").tag(hour)
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    
-                    Picker("Минуты", selection: $minutes) {
-                        ForEach(0..<60, id: \.self) { minute in
-                            Text("\(minute) мин").tag(minute)
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                }
-                .frame(height: 150)
+                TimePickerView(hours: $hours, minutes: $minutes)
                 
                 Toggle("Удаленная работа", isOn: $isRemoteWork)
                     .padding(.horizontal)
@@ -49,7 +34,7 @@ struct TimePickerView: View {
                         }
                     }
                     .frame(height: 200)
-                    .listStyle(.plain) // или другой стиль по вашему вкусу
+                    .listStyle(.plain) 
                 }
                 
                 Spacer()
@@ -71,29 +56,10 @@ struct TimePickerView: View {
                     case .success(let emails):
                         availableEmails = emails
                     case .failure(let error):
-                        print("Error fetching emails: \(error.localizedDescription)")
+                        print("Ошибка получения emails: \(error.localizedDescription)")
                     }
                 }
             }
         }
-    }
-}
-
-struct MultipleSelectionRow: View {
-    var title: String
-    var isSelected: Bool
-    var action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(title)
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                }
-            }
-        }
-        .foregroundColor(isSelected ? .blue : .primary)
     }
 }

@@ -8,6 +8,7 @@ class AuthService: ObservableObject {
     @Published var isAuthenticated = false
     @Published var errorMessage: String?
     @Published var userName: String = ""
+    @Published var employeeId: String = ""
     
     let tokenKey = "x-access-token"
     let loginKey = "saved-login"
@@ -156,14 +157,25 @@ class AuthService: ObservableObject {
         
         httpClient.request(url) { [weak self] result in
             DispatchQueue.main.async {
-                guard let self = self else { return }
+                guard let self = self else {
+                    completion(false)
+                    return
+                }
                 
                 switch result {
                 case .success((let data, _)):
-                    self.processUserInfo(data: data, completion: completion)
+                    self.processUserInfo(data: data) { success in
+                        if success {
+                            // После успешного получения userInfo вызываем getEmployee
+                            self.getEmployee(completion: completion)
+                        } else {
+                            completion(false)
+                        }
+                    }
                 case .failure(let error):
                     self.handleUserInfoError(error)
                     completion(false)
+                    self.logout()
                 }
             }
         }
@@ -184,13 +196,73 @@ class AuthService: ObservableObject {
             completion(false)
         }
     }
+
+    
+    func getEmployee(completion: @escaping (Bool) -> Void) {
+        guard var urlComponents = URLComponents(string: ApiConfig.Attendance.employee) else {
+            DispatchQueue.main.async {
+                self.errorMessage = "Некорректный URL"
+                completion(false)
+            }
+            return
+        }
+        
+        urlComponents.queryItems = [
+            URLQueryItem(name: "onlyMe", value: "true")
+        ]
+        
+        guard let url = urlComponents.url else {
+            DispatchQueue.main.async {
+                self.errorMessage = "Ошибка формирования URL"
+                completion(false)
+            }
+            return
+        }
+        
+        httpClient.request(url) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else {
+                    completion(false)
+                    return
+                }
+                
+                switch result {
+                case .success((let data, _)):
+                    self.processEmployee(data: data, completion: completion)
+                case .failure(let error):
+                    self.handleUserInfoError(error)
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    private func processEmployee(data: Data, completion: @escaping (Bool) -> Void) {
+        do {
+            // Парсим массив словарей
+            if let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                // Берем первый элемент массива
+                if let firstEmployee = jsonArray.first,
+                   let employeeId = firstEmployee["externalEmployeeId"] as? String {
+                    self.employeeId = employeeId
+                    completion(true)
+                } else {
+                    errorMessage = "Не удалось получить данные сотрудника из массива"
+                    completion(false)
+                }
+            }
+        } catch {
+            errorMessage = "Ошибка обработки данных: \(error.localizedDescription)"
+            completion(false)
+        }
+    }
     
     private func handleUserInfoError(_ error: Error) {
         if let networkError = error as? NetworkError {
             switch networkError {
             case .unauthorized:
-                logout()
                 errorMessage = "Сессия истекла"
+                logout()
             case .serverError(let code):
                 errorMessage = "Ошибка сервера: \(code)"
             default:

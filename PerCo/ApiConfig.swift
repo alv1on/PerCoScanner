@@ -1,6 +1,6 @@
 // APIConfig.swift
 enum ApiConfig {
-    private static let baseURL = "https://perco-prerelease.shate-m.by/api/v1"
+    private static let baseURL = "https://perco.shate-m.by/api/v1"
     
     enum Auth {
         static let login = "\(baseURL)/account/login"
@@ -17,5 +17,14 @@ enum ApiConfig {
     
     enum User {
         static let userEmails = "\(baseURL)/user/userEmails"
+    }
+    
+    enum Attendance {
+        static let employee = "\(baseURL)/attendance/employee"
+    }
+    
+    enum Redmine {
+        static let issues = "\(baseURL)/redmine/issues/"
+        static let createTimeEntry = "\(baseURL)/redmine"
     }
 }

@@ -23,6 +23,14 @@ struct PerCoApp: App {
         )
     }
     
+    private var redmineService: RedmineService {
+        RedmineService(
+            authService: authService,
+            appState: appState,
+            httpClient: httpClient
+        )
+    }
+    
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -35,6 +43,7 @@ struct PerCoApp: App {
                             .environmentObject(authService)
                             .environmentObject(appState)
                             .environmentObject(ownDateService)
+                            .environmentObject(redmineService)
                     } else {
                         LoginView()
                             .environmentObject(authService)

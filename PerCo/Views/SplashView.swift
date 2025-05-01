@@ -10,15 +10,11 @@ struct SplashView: View {
                 ContentView()
             } else {
                 ZStack {
-                    // Черный фон на весь экран
                     Color.black.ignoresSafeArea()
                     
-                    // Основное содержимое
                     VStack {
-                        // Пустое пространство сверху для центрирования
                         Spacer()
-                        
-                        // Центрированный логотип и текст
+                    
                         VStack {
                             Image("perco-logo")
                                 .resizable()

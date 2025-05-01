@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var ownDateService: OwnDateService
+    @EnvironmentObject var redmineService: RedmineService
     @EnvironmentObject var appState: AppState
     @State private var isShowingScanner = false
     @State private var scannedCode: String?
@@ -10,20 +11,23 @@ struct ContentView: View {
     @State private var selectedHours = 0
     @State private var selectedMinutes = 0
     @State private var isShowingTimePicker = false
+    @State private var isShowRedminePicker = false
     @State private var isShowingOwnTypeList = false
     @State private var isRemoteWork = false
+    @State private var isOverTimeWork: Bool = false
+    @State private var redmineComment: String = ""
+    @State private var selectedRedmineIssue: RedmineIssue?
     @State private var timePickerType: String?
     @State private var selectedEmails: [String] = []
     @State private var selectedEventType = "OwnExpenses"
+    @State private var selectedActivityId = 0
+    @State private var isScanButtonAnimating = false
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Приветственный заголовок
                     VStack {
-                        Text("Добро пожаловать")
-                            .font(.title)
                         if !authService.userName.isEmpty {
                             Text(authService.userName)
                                 .font(.headline)
@@ -55,9 +59,14 @@ struct ContentView: View {
                         )
                         
                         ActionTileView(
-                            icon: "qrcode.viewfinder",
-                            label: "Сканировать",
-                            action: { isShowingScanner = true }
+                            icon: "plus.square.dashed",
+                            label: "Redmine",
+                            action: {
+                                selectedActivityId = 15
+                                redmineComment = "Работа над задачей"
+                                isShowRedminePicker = true
+                            },
+                            isLoading: appState.isLoading
                         )
                         
                         ActionTileView(
@@ -98,6 +107,21 @@ struct ContentView: View {
                             .foregroundStyle(.white, .blue)
                     }
                 }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        withAnimation { isShowingScanner = true }
+                    }) {
+                        Image(systemName: "qrcode.viewfinder")
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, .blue)
+                            .scaleEffect(isScanButtonAnimating ? 1.1 : 1.0)
+                            .onAppear {
+                                withAnimation(.easeInOut(duration: 1.0).repeatForever()) {
+                                    isScanButtonAnimating.toggle()
+                                }
+                            }
+                    }
+                }
             }
             .alert("Выйти из аккаунта?", isPresented: $showLogoutAlert) {
                 Button("Выйти", role: .destructive) { authService.logout() }
@@ -117,7 +141,7 @@ struct ContentView: View {
                 .edgesIgnoringSafeArea(.all)
             }
             .sheet(isPresented: $isShowingTimePicker) {
-                TimePickerView(
+                OwnDateView(
                     hours: $selectedHours,
                     minutes: $selectedMinutes,
                     isRemoteWork: $isRemoteWork,
@@ -154,7 +178,37 @@ struct ContentView: View {
                         isShowingOwnTypeList = false
                     }
                 )
-                .environmentObject(ownDateService)
+            }
+            .sheet(isPresented: $isShowRedminePicker) {
+                RedmineIssuePickerView(
+                    hours: $selectedHours,
+                    minutes: $selectedMinutes,
+                    isRemoteWork: $isRemoteWork,
+                    isOverTimeWork: $isOverTimeWork,
+                    comment: $redmineComment,
+                    activityId: $selectedActivityId,
+                    selectedIssue: $selectedRedmineIssue,
+                    onCancel: {
+                        isShowRedminePicker = false
+                    },
+                    onConfirm: {
+                        guard let issue = selectedRedmineIssue else {
+                            return
+                        }
+                        
+                        redmineService.createTimeEntry(
+                            issueId: String(issue.id),
+                            hours: selectedHours,
+                            minutes: selectedMinutes,
+                            isRemoteWork: isRemoteWork,
+                            isOverTimeWork: isOverTimeWork,
+                            comment: redmineComment,
+                            activityId: selectedActivityId
+                        )
+                        
+                        isShowRedminePicker = false
+                    }
+                )
             }
             .onAppear {
                 if authService.isAuthenticated {

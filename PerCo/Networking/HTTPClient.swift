@@ -45,8 +45,8 @@ class HTTPClient {
                 }
                 
                 if httpResponse.statusCode == 401 {
-                    self.unauthorizedHandler?()
                     completion(.failure(NetworkError.unauthorized))
+                    self.unauthorizedHandler?()
                     return
                 }
                 
