@@ -8,4 +8,5 @@ struct AttendanceEvent: Codable {
     let ownDayId: Int?
     let isRemoteWork: Bool
     let emails: [String]?
+    let projectScope: String?
 }

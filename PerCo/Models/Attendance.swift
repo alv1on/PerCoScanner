@@ -2,19 +2,19 @@ struct Attendance: Codable {
     let date: String
     let isHoliday: Bool
     let neededTime: String
-    let neededTimeInHours: Int
+    let neededTimeInHours: Double
     let officeTime: String
-    let overTimeInHours: Int
+    let overTimeInHours: Double
     let overTime: String
-    let officeTimeInHours: Int
+    let officeTimeInHours: Double
     let outTime: String
-    let outTimeInHours: Int
+    let outTimeInHours: Double
     let remoteTime: String
-    let remoteTimeInHours: Int
+    let remoteTimeInHours: Double
     let trackTime: String
     let trackTimeInHours: String
     let workedTimeTotal: String
-    let workedTimeTotalInHours: Int
+    let workedTimeTotalInHours: Double
     let lastCalcDateTime: String
     let isMoreThanNeeded: Bool
     let isNeedReCalcTotalTime: Bool

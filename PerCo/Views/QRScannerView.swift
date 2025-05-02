@@ -20,6 +20,7 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
     var previewLayer: AVCaptureVideoPreviewLayer!
     var onQRCodeScanned: ((String) -> Void)?
     var onDismiss: (() -> Void)?
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
     
     // UI элементы
     private let closeButton: UIButton = {
@@ -69,6 +70,7 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
         setupCamera()
         setupUI()
         setupActions()
+        feedbackGenerator.prepare()
     }
     
     private func setupCamera() {
@@ -212,6 +214,9 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
         if scanFrameView.frame.contains(qrCodeCenter) {
             captureSession.stopRunning()
             
+            // Тактильный отклик
+            feedbackGenerator.impactOccurred()
+            
             UIView.animate(withDuration: 0.2, animations: {
                 self.scanFrameView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
                 self.scanFrameView.layer.borderColor = UIColor.systemGreen.cgColor
@@ -342,12 +347,24 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
                 }
                 
                 if (200...299).contains(httpResponse.statusCode) {
-                    self?.showSuccessAlert()
+                    // Успешная авторизация - просто закрываем сканер
+                    self?.onDismiss?()
                 } else {
-                    self?.showErrorAlert(message: "Ошибка сервера: \(httpResponse.statusCode)")
+                    self?.handleHTTPError(statusCode: httpResponse.statusCode)
                 }
             }
         }.resume()
+    }
+    
+    private func handleHTTPError(statusCode: Int) {
+        let errorMessage: String
+        switch statusCode {
+        case 401: errorMessage = "Неверный логин или пароль"
+        case 403: errorMessage = "Доступ запрещен"
+        case 404: errorMessage = "Сессия не найдена"
+        default: errorMessage = "Ошибка сервера: \(statusCode)"
+        }
+        showErrorAlert(message: errorMessage)
     }
     
     private func showErrorAlert(message: String) {
@@ -358,18 +375,6 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
             self?.restartScanning()
-        })
-        present(alert, animated: true)
-    }
-    
-    private func showSuccessAlert() {
-        let alert = UIAlertController(
-            title: "Успешно",
-            message: "Авторизация прошла успешно",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-            self?.onDismiss?()
         })
         present(alert, animated: true)
     }

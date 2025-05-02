@@ -341,10 +341,7 @@ struct ContentView: View {
                         print("Error decoding attendance data: \(error)")
                         // Устанавливаем значения по умолчанию при ошибке
                         self.attendanceData = nil
-                        self.progress = 0
-                        self.timeWorked = "00:00"
-                        self.timeRemaining = "08:30"
-                        self.expectedFinishTime = "N/A"
+                        resetProgressValues()
                     }
                 }
             }
