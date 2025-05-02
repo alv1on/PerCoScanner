@@ -1,4 +1,4 @@
-struct RedmineActivity: Identifiable {
+struct Activity: Identifiable {
     let id: Int
     let name: String
 }

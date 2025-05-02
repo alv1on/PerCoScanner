@@ -1,22 +1,36 @@
 import SwiftUI
 
-struct RedmineIssuePickerView: View {
-    @EnvironmentObject var redmineService: RedmineService
+struct WorkItemPickerView: View {
+    @EnvironmentObject var azureService: AzureService
     @Binding var hours: Int
     @Binding var minutes: Int
     @Binding var isRemoteWork: Bool
     @Binding var isOverTimeWork: Bool
     @Binding var comment: String
-    @Binding var activityId: Int
-    @Binding var selectedIssue: RedmineIssue?
+    @Binding var workType: String
+    @Binding var projectScope: String
+    @Binding var selectedWorkItem: WorkItem?
+    @State private var selectedProjectType: ProjectType = .shate
     
     @State private var searchText = ""
-    @State private var availableActivities: [RedmineActivity] = []
-    @State private var searchResults: [RedmineIssue] = []
+    @State private var searchResults: [WorkItem] = []
     @State private var searchTask: DispatchWorkItem?
     @State private var showDetails = false
     @FocusState private var focusedField: Field?
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
+    
+    private let workTypes: [String: String] = [
+            "BusinessAnalysis": "Бизнес анализ",
+            "Development": "Разработка",
+            "Consultation": "Консультация",
+            "Testing": "Тестирование",
+            "Implementation": "Внедрение",
+            "Design": "Дизайн",
+            "CodeDesign": "Проектирование",
+            "ExternalConsultation": "Внешняя консультация",
+            "ChangeSettings": "Изменение данных/настроек",
+            "Documentation": "Разработка документации"
+        ]
     
     private enum Field: Hashable {
         case search, comment
@@ -25,20 +39,24 @@ struct RedmineIssuePickerView: View {
     var onCancel: () -> Void
     var onConfirm: () -> Void
     
-    private let mockActivities = [
-        RedmineActivity(id: 15, name: "Разработка")
-    ]
-    
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack {
-                        // MARK: - Поле поиска задач
+                        // Добавлен сегментированный контрол для выбора типа проекта
+                        Picker("Тип проекта", selection: $selectedProjectType) {
+                            ForEach(ProjectType.allCases, id: \.self) { type in
+                                Text(type.displayName).tag(type)
+                            }
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                        
                         searchFieldView
                         
-                        // MARK: - Список найденных задач
-                        if !searchResults.isEmpty && selectedIssue == nil {
+                        if !searchResults.isEmpty && selectedWorkItem == nil {
                             issuesListView
                         }
                         
@@ -62,13 +80,14 @@ struct RedmineIssuePickerView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Готово", action: onConfirm)
-                        .disabled(selectedIssue == nil)
+                        .disabled(selectedWorkItem == nil)
                 }
             }
             .onAppear {
                 focusedField = .search
+                workType = "Development" 
             }
-            .onChange(of: selectedIssue) { _, newValue in
+            .onChange(of: selectedWorkItem) { _, newValue in
                 withAnimation {
                     showDetails = newValue != nil
                 }
@@ -76,7 +95,6 @@ struct RedmineIssuePickerView: View {
         }
     }
     
-    // MARK: - Subviews
     
     private var searchFieldView: some View {
         TextField("Поиск задачи...", text: $searchText)
@@ -94,14 +112,14 @@ struct RedmineIssuePickerView: View {
     
     private var issuesListView: some View {
         List {
-            ForEach(searchResults, id: \.id) { issue in
+            ForEach(searchResults, id: \.workItemId) { workItem in
                 Button(action: {
-                    selectIssue(issue)
+                    selectWorkItem(workItem)
                 }) {
                     HStack {
-                        Text("#\(issue.id): \(issue.subject)")
+                        Text("#\(workItem.workItemId): \(workItem.title)")
                         Spacer()
-                        if selectedIssue?.id == issue.id {
+                        if selectedWorkItem?.workItemId == workItem.workItemId {
                             Image(systemName: "checkmark")
                                 .foregroundColor(.blue)
                         }
@@ -115,22 +133,20 @@ struct RedmineIssuePickerView: View {
     
     @ViewBuilder
     private func detailsView(proxy: ScrollViewProxy) -> some View {
-        // MARK: - Детали выбранной задачи
-        if let selectedIssue = selectedIssue {
+        if let selectedWorkItem = selectedWorkItem {
             VStack(alignment: .leading) {
                 Text("Выбрана задача:")
                     .font(.headline)
                 
                 HStack {
-                    Text("#\(selectedIssue.id) - \(selectedIssue.subject)")
+                    Text("#\(selectedWorkItem.workItemId) - \(selectedWorkItem.title)")
                         .font(.subheadline)
                     
                     Spacer()
                     
-                    // Кнопка копирования
                     Button(action: {
-                        UIPasteboard.general.string = "#\(selectedIssue.id) - \(selectedIssue.subject)"
-                        feedbackGenerator.impactOccurred() // Тактильная реакция
+                        UIPasteboard.general.string = "#\(selectedWorkItem.workItemId) - \(selectedWorkItem.title)"
+                        feedbackGenerator.impactOccurred()
                     }) {
                         Image(systemName: "doc.on.doc")
                             .foregroundColor(.blue)
@@ -145,16 +161,12 @@ struct RedmineIssuePickerView: View {
             .transition(.opacity)
         }
         
-        // MARK: - Выбор времени
         timePickersView
         
-        // MARK: - Выбор активности
-        activityPickerView
+        workTypePickerView
         
-        // MARK: - Переключатели
         toggleViews
         
-        // MARK: - Поле комментария
         commentFieldView
             .id(Field.comment)
     }
@@ -164,16 +176,16 @@ struct RedmineIssuePickerView: View {
             .transition(.opacity)
     }
     
-    private var activityPickerView: some View {
-        Picker("Activity", selection: $activityId) {
-            ForEach(mockActivities, id: \.id) { activity in
-                Text(activity.name).tag(activity.id)
+    private var workTypePickerView: some View {
+            Picker("Тип работы", selection: $workType) {
+                ForEach(workTypes.sorted(by: { $0.value < $1.value }), id: \.key) { key, value in
+                    Text(value).tag(key)
+                }
             }
+            .pickerStyle(MenuPickerStyle())
+            .padding(.horizontal)
+            .transition(.opacity)
         }
-        .pickerStyle(MenuPickerStyle())
-        .padding(.horizontal)
-        .transition(.opacity)
-    }
     
     private var toggleViews: some View {
         VStack {
@@ -197,10 +209,9 @@ struct RedmineIssuePickerView: View {
             .transition(.opacity)
     }
     
-    // MARK: - Private Methods
-    
-    private func selectIssue(_ issue: RedmineIssue) {
-        selectedIssue = issue
+    private func selectWorkItem(_ workItem: WorkItem) {
+        selectedWorkItem = workItem
+        projectScope = workItem.projectScope
         searchResults = []
         withAnimation {
             showDetails = true
@@ -211,7 +222,7 @@ struct RedmineIssuePickerView: View {
     private func clearSearchResults() {
         searchResults = []
         showDetails = false
-        selectedIssue = nil
+        selectedWorkItem = nil
     }
     
     private func handleSearchTextChange(_ newValue: String) {
@@ -223,12 +234,17 @@ struct RedmineIssuePickerView: View {
         }
         
         let task = DispatchWorkItem {
-            redmineService.searchIssues(searchText: newValue) { result in
+            azureService.searchIssues(
+                searchText: newValue,
+                projectScope: selectedProjectType.rawValue
+            ) { result in
                 DispatchQueue.main.async {
-                    if selectedIssue == nil {
+                    if selectedWorkItem == nil {
                         switch result {
-                        case .success(let issues): searchResults = issues
-                        case .failure: searchResults = []
+                        case .success(let workItems):
+                            searchResults = workItems
+                        case .failure:
+                            searchResults = []
                         }
                     }
                 }

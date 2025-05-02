@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 struct OwnDate: Codable {
     let dateTimes: [String]

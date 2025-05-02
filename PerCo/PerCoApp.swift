@@ -23,8 +23,8 @@ struct PerCoApp: App {
         )
     }
     
-    private var redmineService: RedmineService {
-        RedmineService(
+    private var azureService: AzureService {
+        AzureService(
             authService: authService,
             appState: appState,
             httpClient: httpClient
@@ -43,7 +43,7 @@ struct PerCoApp: App {
                             .environmentObject(authService)
                             .environmentObject(appState)
                             .environmentObject(ownDateService)
-                            .environmentObject(redmineService)
+                            .environmentObject(azureService)
                     } else {
                         LoginView()
                             .environmentObject(authService)

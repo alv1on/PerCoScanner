@@ -237,7 +237,17 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
             return
         }
         
-        showLoginForm(sessionId: sessionId)
+        // Проверяем, есть ли сохраненные данные для авторизации
+        let hasSavedCredentials = AuthService.shared.hasSavedLogin() &&
+                                (AuthService.shared.getKey(AuthService.shared.passwordKey) != nil)
+        
+        if hasSavedCredentials {
+            // Если есть сохраненные данные, сразу показываем форму (она автоматически отправит запрос)
+            showLoginForm(sessionId: sessionId)
+        } else {
+            // Если нет сохраненных данных, показываем форму для ручного ввода
+            showLoginForm(sessionId: sessionId)
+        }
     }
     
     private func showInvalidQRCodeAlert() {
@@ -253,20 +263,32 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
     }
     
     private func showLoginForm(sessionId: String) {
+        // Получаем сохраненные логин и пароль
+        let savedLogin = AuthService.shared.getKey(AuthService.shared.loginKey) ?? ""
+        let savedPassword = AuthService.shared.getKey(AuthService.shared.passwordKey) ?? ""
+        
+        // Если есть сохраненные данные, сразу отправляем запрос
+        if !savedLogin.isEmpty && !savedPassword.isEmpty {
+            sendAuthRequest(sessionId: sessionId, login: savedLogin.lowercased(), password: savedPassword)
+            return
+        }
+        
+        // Если сохраненных данных нет, показываем форму ввода
         let alert = UIAlertController(
             title: "Авторизация",
-            message: "Введите email и пароль",
+            message: "Введите логин и пароль",
             preferredStyle: .alert
         )
         
         alert.addTextField { textField in
-            textField.placeholder = "Email"
-            textField.keyboardType = .emailAddress
+            textField.placeholder = "Login"
+            textField.text = savedLogin // Подставляем сохраненный логин, если есть
         }
         
         alert.addTextField { textField in
             textField.placeholder = "Пароль"
             textField.isSecureTextEntry = true
+            textField.text = savedPassword // Подставляем сохраненный пароль, если есть
         }
         
         alert.addAction(UIAlertAction(title: "Отмена", style: .cancel) { [weak self] _ in
@@ -274,17 +296,17 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
         })
         
         alert.addAction(UIAlertAction(title: "Войти", style: .default) { [weak self] _ in
-            guard let email = alert.textFields?.first?.text,
+            guard let login = alert.textFields?.first?.text?.lowercased(),
                   let password = alert.textFields?.last?.text else {
                 return
             }
-            self?.sendAuthRequest(sessionId: sessionId, email: email, password: password)
+            self?.sendAuthRequest(sessionId: sessionId, login: login, password: password)
         })
         
         present(alert, animated: true)
     }
     
-    private func sendAuthRequest(sessionId: String, email: String, password: String) {
+    private func sendAuthRequest(sessionId: String, login: String, password: String) {
         loadingIndicator.startAnimating()
         
         let url = URL(string: ApiConfig.Auth.loginQrCode)!
@@ -294,7 +316,7 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
         
         let body: [String: Any] = [
             "sessionId": sessionId,
-            "email": email,
+            "login": login,
             "password": password
         ]
         
