@@ -277,19 +277,17 @@ struct ContentView: View {
     // MARK: - Methods
     
     private func setupOnAppear() {
-        notificationService.requestAuthorization { granted in
-            if granted {
-                print("Уведомления разрешены")
-            } else {
-                print("Уведомления запрещены")
-                // Можно показать алерт с предложением включить в настройках
-            }
-        }
+        notificationService.requestAuthorization { granted in }
         if authService.isAuthenticated {
             authService.fetchUserInfo { _ in }
             fetchAttendanceData()
         }
         startProgressTimer()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                if self.attendanceData == nil {
+                    self.fetchAttendanceData()
+                }
+            }
     }
     
     private func refreshData() async {
@@ -304,13 +302,18 @@ struct ContentView: View {
     private func startProgressTimer() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-            if let attendance = attendanceData {
-                calculateWorkProgress(attendance: attendance)
-            }
+            self.fetchAttendanceData() // Полностью обновляем данные вместо ручного расчета
         }
+        // Первый запуск сразу
+        timer?.fire()
     }
     
     private func fetchAttendanceData() {
+        guard authService.isAuthenticated else {
+            resetProgressValues()
+            return
+        }
+        
         isLoadingAttendance = true
         
         let today = Date()
