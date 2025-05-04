@@ -7,8 +7,6 @@ class OwnDateService: ObservableObject {
     private let httpClient: HTTPClient
     @Published var userEmails: [String] = []
     
-    private let tokenKey = "x-access-token"
-    
     init(authService: AuthService, appState: AppState, httpClient : HTTPClient) {
         self.authService = authService
         self.appState = appState

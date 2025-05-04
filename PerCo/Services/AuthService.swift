@@ -11,6 +11,7 @@ class AuthService: ObservableObject {
     @Published var employeeId: String = ""
     
     let tokenKey = "x-access-token"
+    let refreshTokenKey = "x-refresh-token"
     let loginKey = "saved-login"
     let passwordKey = "saved-password"
     
@@ -18,7 +19,7 @@ class AuthService: ObservableObject {
         HTTPClient(tokenProvider: { [weak self] in
             self?.getKey(self?.tokenKey ?? "")
         }, unauthorizedHandler: { [weak self] in
-            self?.logout()
+            self?.handleUnauthorized()
         })
     }()
     
@@ -37,8 +38,10 @@ class AuthService: ObservableObject {
     
     func logout() {
         removeKey(tokenKey)
+        removeKey(refreshTokenKey)
         isAuthenticated = false
         userName = ""
+        employeeId = ""
     }
     
     func isTokenValid(_ token: String) -> Bool {
@@ -114,21 +117,113 @@ class AuthService: ObservableObject {
         }
     }
     
-    private func processLoginResponse(data: Data, response: HTTPURLResponse, login: String, completion: @escaping (Bool) -> Void) {
-        if let setCookieHeader = response.allHeaderFields["Set-Cookie"] as? String,
-           let range = setCookieHeader.range(of: "X-Access-Token=([^;]+)", options: .regularExpression) {
-            let token = String(setCookieHeader[range].dropFirst("X-Access-Token=".count))
+    func handleUnauthorized() {
+        guard let refreshToken = getKey(refreshTokenKey) else {
+            logout()
+            return
+        }
+        
+        refreshAccessToken(refreshToken: refreshToken) { [weak self] success in
+            if !success {
+                self?.logout()
+            }
+        }
+    }
+    
+    
+    private func refreshAccessToken(refreshToken: String, completion: @escaping (Bool) -> Void) {
+        guard let url = URL(string: ApiConfig.Auth.refresh) else {
+            errorMessage = "Некорректный URL"
+            completion(false)
+            return
+        }
+        
+        let body = ["refreshToken": refreshToken]
+        
+        httpClient.request(url, method: "POST", body: body) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else {
+                    completion(false)
+                    return
+                }
+                
+                switch result {
+                case .success(let (data, response)):
+                    self.processTokenResponse(data: data, response: response, completion: completion)
+                case .failure(let error):
+                    self.errorMessage = "Ошибка обновления токена: \(error.localizedDescription)"
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    private func processTokenResponse(data: Data, response: HTTPURLResponse, completion: @escaping (Bool) -> Void) {
+        if let setCookieHeader = response.allHeaderFields["Set-Cookie"] as? String {
+            var newAccessToken: String?
+            var newRefreshToken: String?
             
-            if self.saveKey(token, keyValue: tokenKey) {
+            // Извлекаем access token
+            if let range = setCookieHeader.range(of: "X-Access-Token=([^;]+)", options: .regularExpression) {
+                newAccessToken = String(setCookieHeader[range].dropFirst("X-Access-Token=".count))
+            }
+            
+            // Извлекаем refresh token
+            if let range = setCookieHeader.range(of: "X-Refresh-Token=([^;]+)", options: .regularExpression) {
+                newRefreshToken = String(setCookieHeader[range].dropFirst("X-Refresh-Token=".count))
+            }
+            
+            guard let accessToken = newAccessToken, let refreshToken = newRefreshToken else {
+                errorMessage = "Токены не найдены в ответе"
+                completion(false)
+                return
+            }
+            
+            if self.saveKey(accessToken, keyValue: tokenKey) &&
+               self.saveKey(refreshToken, keyValue: refreshTokenKey) {
+                completion(true)
+            } else {
+                errorMessage = "Ошибка сохранения токенов"
+                completion(false)
+            }
+        } else {
+            errorMessage = "Не удалось получить токены из заголовков"
+            completion(false)
+        }
+    }
+    
+    private func processLoginResponse(data: Data, response: HTTPURLResponse, login: String, completion: @escaping (Bool) -> Void) {
+        if let setCookieHeader = response.allHeaderFields["Set-Cookie"] as? String {
+            var accessToken: String?
+            var refreshToken: String?
+            
+            // Извлекаем access token
+            if let range = setCookieHeader.range(of: "X-Access-Token=([^;]+)", options: .regularExpression) {
+                accessToken = String(setCookieHeader[range].dropFirst("X-Access-Token=".count))
+            }
+            
+            // Извлекаем refresh token
+            if let range = setCookieHeader.range(of: "X-Refresh-Token=([^;]+)", options: .regularExpression) {
+                refreshToken = String(setCookieHeader[range].dropFirst("X-Refresh-Token=".count))
+            }
+            
+            guard let accessToken = accessToken, let refreshToken = refreshToken else {
+                self.errorMessage = "Токены не найдены"
+                completion(false)
+                return
+            }
+            
+            if self.saveKey(accessToken, keyValue: tokenKey) &&
+               self.saveKey(refreshToken, keyValue: refreshTokenKey) {
                 _ = self.saveKey(login, keyValue: loginKey)
                 self.isAuthenticated = true
                 self.fetchUserInfo(completion: completion)
             } else {
-                self.errorMessage = "Ошибка сохранения токена"
+                self.errorMessage = "Ошибка сохранения токенов"
                 completion(false)
             }
         } else {
-            self.errorMessage = "Токен не найден"
+            self.errorMessage = "Токены не найдены в заголовках"
             completion(false)
         }
     }

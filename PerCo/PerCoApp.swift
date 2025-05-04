@@ -12,7 +12,7 @@ struct PerCoApp: App {
             tokenProvider: { [weak authService] in
                 authService?.getKey("x-access-token")
             },
-            unauthorizedHandler: { authService.logout() }
+            unauthorizedHandler: { authService.handleUnauthorized() }
         )
     }
     

@@ -4,6 +4,7 @@ enum ApiConfig {
     
     enum Auth {
         static let login = "\(baseURL)/account/login"
+        static let refresh = "\(baseURL)/account/refresh"
         static let loginQrCode = "\(baseURL)/account/loginViaQr"
     }
     
