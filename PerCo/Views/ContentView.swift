@@ -279,8 +279,8 @@ struct ContentView: View {
         if authService.isAuthenticated {
             authService.fetchUserInfo { _ in }
             fetchAttendanceData()
-            startProgressTimer()
         }
+        startProgressTimer()
     }
     
     private func refreshData() async {
@@ -349,51 +349,134 @@ struct ContentView: View {
     }
     
     private func calculateWorkProgress(attendance: AttendanceResponse) {
-        guard let enterEvent = attendance.attendances.first?.events.first(where: { $0.type == "EnterManual" }),
-              let spentTime = enterEvent.spentTime else {
+        // 1. Парсим общее необходимое время (totalNeeded)
+        let totalNeededComponents = attendance.totalNeeded.components(separatedBy: ":")
+        guard totalNeededComponents.count == 3,
+              let neededHours = Int(totalNeededComponents[0]),
+              let neededMinutes = Int(totalNeededComponents[1]) else {
             resetProgressValues()
             return
         }
+        let totalNeededMinutes = (neededHours * 60) + neededMinutes
         
-        let timeComponents = spentTime.components(separatedBy: ":")
-        guard timeComponents.count == 3,
-              let hours = Int(timeComponents[0]),
-              let minutes = Int(timeComponents[1]) else {
+        // 2. Парсим уже отработанное время (total)
+        let totalComponents = attendance.total.components(separatedBy: ":")
+        guard totalComponents.count == 3,
+              let totalHours = Int(totalComponents[0]),
+              let totalMinutes = Int(totalComponents[1]) else {
             resetProgressValues()
             return
         }
+        let totalWorkedMinutes = (totalHours * 60) + totalMinutes
         
-        let enterDate = Calendar.current.date(bySettingHour: hours, minute: minutes, second: 0, of: Date()) ?? Date()
-        let timeWorkedInMinutes = Calendar.current.dateComponents([.minute], from: enterDate, to: Date()).minute ?? 0
+        // 3. Находим все события входа/выхода и сортируем по времени
+        let events = attendance.attendances.first?.events.sorted {
+            ($0.spentTime ?? "") < ($1.spentTime ?? "")
+        } ?? []
         
-        let totalWorkMinutes = 8 * 60 + 30 // 8 часов 30 минут
-        let calculatedProgress = Double(timeWorkedInMinutes) / Double(totalWorkMinutes)
-        progress = min(max(calculatedProgress, 0), 1.0)
+        // 4. Определяем текущий статус (внутри или снаружи офиса)
+        var isCurrentlyInside = false
+        var lastEnterTime: String?
+        var lastEnterDate: Date?
         
-        // Форматирование времени
-        let hoursWorked = timeWorkedInMinutes / 60
-        let minutesWorked = timeWorkedInMinutes % 60
+        for event in events {
+            if event.type == "EnterManual" {
+                isCurrentlyInside = true
+                lastEnterTime = event.spentTime
+            } else if event.type == "ExitManual" {
+                isCurrentlyInside = false
+            }
+        }
+        
+        // 5. Если сейчас внутри офиса (есть незавершенная сессия)
+        if isCurrentlyInside, let lastEnterTime = lastEnterTime {
+            // Парсим время последнего входа
+            let enterTimeComponents = lastEnterTime.components(separatedBy: ":")
+            guard enterTimeComponents.count == 3,
+                  let enterHours = Int(enterTimeComponents[0]),
+                  let enterMinutes = Int(enterTimeComponents[1]) else {
+                resetProgressValues()
+                return
+            }
+            
+            // Создаем дату последнего входа
+            let calendar = Calendar.current
+            let now = Date()
+            lastEnterDate = calendar.date(bySettingHour: enterHours, minute: enterMinutes, second: 0, of: now) ?? now
+            
+            // Рассчитываем время с последнего входа
+            let minutesSinceLastEnter = calendar.dateComponents([.minute], from: lastEnterDate!, to: now).minute ?? 0
+            
+            // Общее время работы = уже отработанное + время текущей сессии
+            let totalWorkedWithCurrent = totalWorkedMinutes + minutesSinceLastEnter
+            
+            // Оставшееся время (может быть отрицательным если переработка)
+            let remainingMinutes = totalNeededMinutes - totalWorkedWithCurrent
+            
+            // Расчет прогресса
+            calculateAndDisplayProgress(
+                totalWorked: totalWorkedWithCurrent,
+                totalNeeded: totalNeededMinutes,
+                remainingMinutes: remainingMinutes,
+                lastEnterDate: lastEnterDate
+            )
+        } else {
+            // 6. Если сейчас снаружи офиса
+            let remainingMinutes = totalNeededMinutes - totalWorkedMinutes
+            calculateAndDisplayProgress(
+                totalWorked: totalWorkedMinutes,
+                totalNeeded: totalNeededMinutes,
+                remainingMinutes: remainingMinutes,
+                lastEnterDate: nil
+            )
+        }
+    }
+
+    private func calculateAndDisplayProgress(
+        totalWorked: Int,
+        totalNeeded: Int,
+        remainingMinutes: Int,
+        lastEnterDate: Date?
+    ) {
+        // 1. Расчет прогресса (0...1)
+        progress = min(max(Double(totalWorked) / Double(totalNeeded), 0), 1.0)
+        
+        // 2. Форматирование отработанного времени
+        let hoursWorked = totalWorked / 60
+        let minutesWorked = totalWorked % 60
         timeWorked = String(format: "%02d:%02d", hoursWorked, minutesWorked)
         
-        let remainingMinutes = max(totalWorkMinutes - timeWorkedInMinutes, 0)
-        let hoursRemaining = remainingMinutes / 60
-        let minutesRemaining = remainingMinutes % 60
-        timeRemaining = String(format: "%02d:%02d", hoursRemaining, minutesRemaining)
+        // 3. Оставшееся время (абсолютное значение)
+        let absRemaining = abs(remainingMinutes)
+        let hoursRemaining = absRemaining / 60
+        let minutesRemaining = absRemaining % 60
         
-        // Расчет времени окончания
-        if let finishDate = Calendar.current.date(byAdding: .minute, value: remainingMinutes, to: Date()) {
-            let formatter = DateFormatter()
-            formatter.timeStyle = .short
-            expectedFinishTime = formatter.string(from: finishDate)
+        if remainingMinutes > 0 {
+            timeRemaining = String(format: "%02d:%02d", hoursRemaining, minutesRemaining)
+        } else if remainingMinutes < 0 {
+            timeRemaining = String(format: "+%02d:%02d", hoursRemaining, minutesRemaining)
+        } else {
+            timeRemaining = "00:00"
+        }
+        
+        // 4. Расчет времени окончания (только если внутри офиса и осталось время)
+        if let enterDate = lastEnterDate, remainingMinutes > 0 {
+            if let finishDate = Calendar.current.date(byAdding: .minute, value: remainingMinutes, to: Date()) {
+                let formatter = DateFormatter()
+                formatter.timeStyle = .short
+                expectedFinishTime = formatter.string(from: finishDate)
+            } else {
+                expectedFinishTime = "N/A"
+            }
         } else {
             expectedFinishTime = "N/A"
         }
     }
-    
+
     private func resetProgressValues() {
         progress = 0
         timeWorked = "00:00"
-        timeRemaining = "08:30"
+        timeRemaining = "08:00"
         expectedFinishTime = "N/A"
     }
 }
