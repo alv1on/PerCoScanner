@@ -5,6 +5,7 @@ struct ContentView: View {
     @EnvironmentObject var ownDateService: OwnDateService
     @EnvironmentObject var azureService: AzureService
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var notificationService: NotificationService
     
     // Состояния для управления UI
     @State private var isShowingScanner = false
@@ -276,6 +277,14 @@ struct ContentView: View {
     // MARK: - Methods
     
     private func setupOnAppear() {
+        notificationService.requestAuthorization { granted in
+            if granted {
+                print("Уведомления разрешены")
+            } else {
+                print("Уведомления запрещены")
+                // Можно показать алерт с предложением включить в настройках
+            }
+        }
         if authService.isAuthenticated {
             authService.fetchUserInfo { _ in }
             fetchAttendanceData()
@@ -459,8 +468,12 @@ struct ContentView: View {
             timeRemaining = "00:00"
         }
         
+        if remainingMinutes == 0 {
+            notificationService.showWorkFinishedNotification()
+        }
+        
         // 4. Расчет времени окончания (только если внутри офиса и осталось время)
-        if let enterDate = lastEnterDate, remainingMinutes > 0 {
+        if lastEnterDate != nil, remainingMinutes > 0 {
             if let finishDate = Calendar.current.date(byAdding: .minute, value: remainingMinutes, to: Date()) {
                 let formatter = DateFormatter()
                 formatter.timeStyle = .short

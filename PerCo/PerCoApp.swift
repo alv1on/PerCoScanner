@@ -4,6 +4,7 @@ import SwiftUI
 struct PerCoApp: App {
     @StateObject private var authService = AuthService()
     @StateObject private var appState = AppState()
+    @StateObject private var notificationService = NotificationService()
     @State private var showSplash = true
     
     private var httpClient: HTTPClient {
@@ -40,6 +41,7 @@ struct PerCoApp: App {
                 } else {
                     if authService.isAuthenticated {
                         ContentView()
+                            .environmentObject(notificationService)
                             .environmentObject(authService)
                             .environmentObject(appState)
                             .environmentObject(ownDateService)
