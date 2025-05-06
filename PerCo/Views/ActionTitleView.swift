@@ -14,7 +14,7 @@ struct ActionTileView: View {
                 } else {
                     Image(systemName: icon)
                         .symbolRenderingMode(.palette)
-                        .foregroundStyle(.white, .blue)
+                        .foregroundStyle(.gray, .blue)
                         .font(.system(size: 28))
                 }
                 Text(label)

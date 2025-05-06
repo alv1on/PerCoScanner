@@ -20,12 +20,12 @@ struct SplashView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 100, height: 100)
-                                .foregroundColor(.white)
+                                .foregroundColor(.gray)
                                 .scaleEffect(isAnimating ? 1.2 : 0.8)
                             
                             Text("PerCo")
                                 .font(.title)
-                                .foregroundColor(.white)
+                                .foregroundColor(.gray)
                                 .padding(.top, 16)
                         }
                         .frame(maxHeight: .infinity)

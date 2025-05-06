@@ -26,7 +26,7 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "xmark"), for: .normal)
-        button.tintColor = .white
+        button.tintColor = .gray
         button.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         button.layer.cornerRadius = 20
         return button
@@ -34,7 +34,7 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
     
     private let scanFrameView: UIView = {
         let view = UIView()
-        view.layer.borderColor = UIColor.white.cgColor
+        view.layer.borderColor = UIColor.gray.cgColor
         view.layer.borderWidth = 3
         view.layer.cornerRadius = 20
         view.backgroundColor = .clear
@@ -44,7 +44,7 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
     private let statusLabel: UILabel = {
         let label = UILabel()
         label.text = "Поместите QR-код в рамку"
-        label.textColor = .white
+        label.textColor = .gray
         label.textAlignment = .center
         label.numberOfLines = 0
         label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
@@ -60,7 +60,7 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
     
     private var loadingIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView(style: .large)
-        indicator.color = .white
+        indicator.color = .gray
         indicator.hidesWhenStopped = true
         return indicator
     }()
@@ -381,7 +381,7 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
     
     private func restartScanning() {
         statusLabel.text = "Поместите QR-код в рамку"
-        statusLabel.textColor = .white
+        statusLabel.textColor = .gray
         
         DispatchQueue.global(qos: .background).async { [weak self] in
             self?.captureSession.startRunning()

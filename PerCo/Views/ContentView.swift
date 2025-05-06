@@ -184,7 +184,7 @@ struct ContentView: View {
         Button(action: { showLogoutAlert = true }) {
             Image(systemName: "rectangle.portrait.and.arrow.right")
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, .blue)
+                .foregroundStyle(.gray, .blue)
         }
     }
     
@@ -192,7 +192,7 @@ struct ContentView: View {
         Button(action: { withAnimation { isShowingScanner = true } }) {
             Image(systemName: "qrcode.viewfinder")
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, .blue)
+                .foregroundStyle(.gray, .blue)
                 .scaleEffect(isScanButtonAnimating ? 1.1 : 1.0)
                 .onAppear {
                     withAnimation(.easeInOut(duration: 1.0).repeatForever()) {
