@@ -32,7 +32,7 @@ class AuthService: ObservableObject {
             isAuthenticated = true
             fetchUserInfo { _ in }
         } else {
-            logout()
+            handleUnauthorized()
         }
     }
     
@@ -270,7 +270,7 @@ class AuthService: ObservableObject {
                 case .failure(let error):
                     self.handleUserInfoError(error)
                     completion(false)
-                    self.logout()
+                    self.handleUnauthorized()
                 }
             }
         }
@@ -357,7 +357,7 @@ class AuthService: ObservableObject {
             switch networkError {
             case .unauthorized:
                 errorMessage = "Сессия истекла"
-                logout()
+                handleUnauthorized()
             case .serverError(let code):
                 errorMessage = "Ошибка сервера: \(code)"
             default:
