@@ -361,7 +361,7 @@ struct ContentView: View {
     }
     
     private func calculateWorkProgress(attendance: AttendanceResponse) {
-        // 1. Парсим общее необходимое время (totalNeeded)
+        // 1. Парсим общее необходимое время (totalNeeded) из API
         let totalNeededComponents = attendance.totalNeeded.components(separatedBy: ":")
         guard totalNeededComponents.count == 3,
               let neededHours = Int(totalNeededComponents[0]),
@@ -369,7 +369,7 @@ struct ContentView: View {
             resetProgressValues()
             return
         }
-        let totalNeededMinutes = (neededHours * 60) + neededMinutes
+        var totalNeededMinutes = (neededHours * 60) + neededMinutes
         
         // 2. Парсим уже отработанное время (total)
         let totalComponents = attendance.total.components(separatedBy: ":")
@@ -381,12 +381,35 @@ struct ContentView: View {
         }
         let totalWorkedMinutes = (totalHours * 60) + totalMinutes
         
-        // 3. Находим все события входа/выхода и сортируем по времени
+        // 3. Парсим время вне офиса (totalOutTime)
+        let totalOutComponents = attendance.totalOutTime.components(separatedBy: ":")
+        let totalOutMinutesValue: Int
+        if totalOutComponents.count == 3,
+           let totalOutHours = Int(totalOutComponents[0]),
+           let totalOutMinutes = Int(totalOutComponents[1]) {
+            totalOutMinutesValue = totalOutHours * 60 + totalOutMinutes
+        } else {
+            totalOutMinutesValue = 0
+        }
+        
+        // 4. Проверяем условия для добавления 30 минут обеда
+        let shouldAddLunchBreak =
+            // Случай 1: Еще не было отметок (все нули)
+            (totalWorkedMinutes == 0 && totalOutMinutesValue == 0) ||
+            
+            // Случай 2: Отработано больше 4 часов и время вне офиса ≤ 30 минут
+            (totalWorkedMinutes > 4 * 60 && totalOutMinutesValue < 30)
+        
+        if shouldAddLunchBreak {
+            totalNeededMinutes += 30 // Добавляем 30 минут обеда
+        }
+        
+        // 5. Находим все события входа/выхода и сортируем по времени
         let events = attendance.attendances.first?.events.sorted {
             ($0.spentTime ?? "") < ($1.spentTime ?? "")
         } ?? []
         
-        // 4. Определяем текущий статус (внутри или снаружи офиса)
+        // 6. Определяем текущий статус (внутри или снаружи офиса)
         var isCurrentlyInside = false
         var lastEnterTime: String?
         var lastEnterDate: Date?
@@ -400,7 +423,7 @@ struct ContentView: View {
             }
         }
         
-        // 5. Если сейчас внутри офиса (есть незавершенная сессия)
+        // 7. Если сейчас внутри офиса (есть незавершенная сессия)
         if isCurrentlyInside, let lastEnterTime = lastEnterTime {
             // Парсим время последнего входа
             let enterTimeComponents = lastEnterTime.components(separatedBy: ":")
@@ -433,7 +456,7 @@ struct ContentView: View {
                 lastEnterDate: lastEnterDate
             )
         } else {
-            // 6. Если сейчас снаружи офиса
+            // 8. Если сейчас снаружи офиса
             let remainingMinutes = totalNeededMinutes - totalWorkedMinutes
             calculateAndDisplayProgress(
                 totalWorked: totalWorkedMinutes,
@@ -492,7 +515,7 @@ struct ContentView: View {
     private func resetProgressValues() {
         progress = 0
         timeWorked = "00:00"
-        timeRemaining = "08:00"
+        timeRemaining = "08:30"
         expectedFinishTime = "N/A"
     }
 }

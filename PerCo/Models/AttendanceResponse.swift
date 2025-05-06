@@ -3,6 +3,7 @@ struct AttendanceResponse: Codable {
     let externalEmployeeId: String
     let total: String
     let totalNeeded: String
+    let totalOutTime: String
     let totalTrack: String
     let totalOvertime: String
     let totalDifference: String
