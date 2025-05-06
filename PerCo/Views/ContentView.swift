@@ -73,14 +73,7 @@ struct ContentView: View {
                 Button("OK", role: .cancel) {}
             }
             .sheet(isPresented: $isShowingScanner) {
-                QRScannerView(
-                    onQRCodeScanned: { code in
-                        scannedCode = code
-                        isShowingScanner = false
-                    },
-                    onDismiss: { isShowingScanner = false }
-                )
-                .edgesIgnoringSafeArea(.all)
+                qrCodeSheet
             }
             .sheet(isPresented: $isShowingTimePicker) {
                 timePickerSheet
@@ -200,6 +193,17 @@ struct ContentView: View {
                     }
                 }
         }
+    }
+    
+    private var qrCodeSheet: some View {
+        QRScannerView(
+            onQRCodeScanned: { code in
+                scannedCode = code
+                isShowingScanner = false
+            },
+            onDismiss: { isShowingScanner = false }
+        )
+        .edgesIgnoringSafeArea(.all)
     }
     
     private var timePickerSheet: some View {

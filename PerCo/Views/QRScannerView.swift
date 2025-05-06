@@ -277,38 +277,6 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
             sendAuthRequest(sessionId: sessionId, login: savedLogin.lowercased(), password: savedPassword)
             return
         }
-        
-        // Если сохраненных данных нет, показываем форму ввода
-        let alert = UIAlertController(
-            title: "Авторизация",
-            message: "Введите логин и пароль",
-            preferredStyle: .alert
-        )
-        
-        alert.addTextField { textField in
-            textField.placeholder = "Login"
-            textField.text = savedLogin // Подставляем сохраненный логин, если есть
-        }
-        
-        alert.addTextField { textField in
-            textField.placeholder = "Пароль"
-            textField.isSecureTextEntry = true
-            textField.text = savedPassword // Подставляем сохраненный пароль, если есть
-        }
-        
-        alert.addAction(UIAlertAction(title: "Отмена", style: .cancel) { [weak self] _ in
-            self?.restartScanning()
-        })
-        
-        alert.addAction(UIAlertAction(title: "Войти", style: .default) { [weak self] _ in
-            guard let login = alert.textFields?.first?.text?.lowercased(),
-                  let password = alert.textFields?.last?.text else {
-                return
-            }
-            self?.sendAuthRequest(sessionId: sessionId, login: login, password: password)
-        })
-        
-        present(alert, animated: true)
     }
     
     private func sendAuthRequest(sessionId: String, login: String, password: String) {
