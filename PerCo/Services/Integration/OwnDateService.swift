@@ -70,7 +70,7 @@ class OwnDateService: ObservableObject {
         switch error {
         case NetworkError.unauthorized:
             appState.alertMessage = "Сессия истекла"
-            authService.logout()
+            authService.handleUnauthorized()
         default:
             appState.alertMessage = "Ошибка: \(error.localizedDescription)"
         }

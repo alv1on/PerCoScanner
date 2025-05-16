@@ -77,6 +77,8 @@ class AttendanceService: ObservableObject {
             return resetProgressValues()
         }
         var totalNeededMinutes = (neededHours * 60) + neededMinutes
+        
+        let isTotalNeededZero = (neededHours == 0 && neededMinutes == 0)
 
         // 2. Парсим уже отработанное время (total)
         let totalComponents = attendance.total.components(separatedBy: ":")
@@ -102,15 +104,17 @@ class AttendanceService: ObservableObject {
         }
 
         // 4. Проверяем условия для добавления 30 минут обеда
-        let shouldAddLunchBreak =
-            // Случай 1: Еще не было отметок (все нули)
-            (totalWorkedMinutes == 0 && totalOutMinutesValue == 0)
+        if !isTotalNeededZero {
+            let shouldAddLunchBreak =
+                // Случай 1: Еще не было отметок (все нули)
+                (totalWorkedMinutes == 0 && totalOutMinutesValue == 0)
 
-            // Случай 2: Отработано больше 4 часов и время вне офиса ≤ 30 минут
-            || (totalWorkedMinutes > 4 * 60 && totalOutMinutesValue < 30)
+                // Случай 2: Отработано больше 4 часов и время вне офиса ≤ 30 минут
+                || (totalWorkedMinutes > 4 * 60 && totalOutMinutesValue < 30)
 
-        if shouldAddLunchBreak {
-            totalNeededMinutes += 30  // Добавляем 30 минут обеда
+            if shouldAddLunchBreak {
+                totalNeededMinutes += 30  // Добавляем 30 минут обеда
+            }
         }
 
         // 5. Находим все события входа/выхода и сортируем по времени
@@ -197,6 +201,9 @@ class AttendanceService: ObservableObject {
         progressState.progress = min(
             max(Double(totalWorked) / Double(totalNeeded), 0), 1.0)
 
+        if totalNeeded == 0 {
+            progressState.progress = 1.0
+        }
         // 2. Форматирование отработанного времени
         let hoursWorked = totalWorked / 60
         let minutesWorked = totalWorked % 60
@@ -250,7 +257,7 @@ class AttendanceService: ObservableObject {
         switch error {
         case NetworkError.unauthorized:
             appState.alertMessage = "Сессия истекла"
-            authService.logout()
+            authService.handleUnauthorized()
         default:
             appState.alertMessage =
                 "Ошибка загрузки данных посещаемости: \(error.localizedDescription)"
