@@ -32,6 +32,14 @@ struct PerCoApp: App {
         )
     }
     
+    private var attendanceService: AttendanceService {
+        AttendanceService(
+            authService: authService,
+            appState: appState,
+            httpClient: httpClient
+        )
+    }
+    
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -46,6 +54,7 @@ struct PerCoApp: App {
                             .environmentObject(appState)
                             .environmentObject(ownDateService)
                             .environmentObject(azureService)
+                            .environmentObject(attendanceService)
                     } else {
                         LoginView()
                             .environmentObject(authService)

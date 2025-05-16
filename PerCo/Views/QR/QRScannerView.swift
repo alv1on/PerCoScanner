@@ -4,11 +4,13 @@ import AVFoundation
 struct QRScannerView: UIViewControllerRepresentable {
     var onQRCodeScanned: (String) -> Void
     var onDismiss: () -> Void
+    var authService: AuthService
     
     func makeUIViewController(context: Context) -> QRScannerViewController {
         let viewController = QRScannerViewController()
         viewController.onQRCodeScanned = onQRCodeScanned
         viewController.onDismiss = onDismiss
+        viewController.authService = authService
         return viewController
     }
     
@@ -20,6 +22,8 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
     var previewLayer: AVCaptureVideoPreviewLayer!
     var onQRCodeScanned: ((String) -> Void)?
     var onDismiss: (() -> Void)?
+    var authService: AuthService!
+    
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
     
     // UI элементы
@@ -64,6 +68,10 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
         indicator.hidesWhenStopped = true
         return indicator
     }()
+    
+    // Для анимации
+    private var targetQRFrame: CGRect?
+    private var isAnimatingToQR = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -206,31 +214,51 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
               metadataObject.type == .qr,
               let stringValue = metadataObject.stringValue else { return }
         
-        let qrCodeCenter = CGPoint(
-            x: metadataObject.bounds.midX * view.frame.width,
-            y: metadataObject.bounds.midY * view.frame.height
-        )
+        // Получаем координаты QR-кода в системе координат view
+        let qrCodeBounds = previewLayer.transformedMetadataObject(for: metadataObject)?.bounds ?? .zero
+        let qrCodeCenter = CGPoint(x: qrCodeBounds.midX, y: qrCodeBounds.midY)
         
-        if scanFrameView.frame.contains(qrCodeCenter) {
-            captureSession.stopRunning()
-            
+        // Если QR-код находится в пределах текущей рамки сканера
+        if scanFrameView.frame.insetBy(dx: -50, dy: -50).contains(qrCodeCenter) && !isAnimatingToQR {
+            // Анимируем рамку к размеру QR-кода
+            animateFrameToQRCode(qrCodeBounds: qrCodeBounds, stringValue: stringValue)
+        }
+    }
+    
+    private func animateFrameToQRCode(qrCodeBounds: CGRect, stringValue: String) {
+        isAnimatingToQR = true
+        captureSession.stopRunning()
+        
+        // Рассчитываем конечный размер рамки (немного больше QR-кода)
+        let padding: CGFloat = 20
+        let targetFrame = qrCodeBounds.insetBy(dx: -padding, dy: -padding)
+        
+        // Сохраняем оригинальный цвет рамки
+        _ = scanFrameView.layer.borderColor
+        
+        // Анимация изменения размера рамки
+        UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.5, options: []) {
+            self.scanFrameView.frame = targetFrame
+            self.scanFrameView.layer.borderColor = UIColor.systemGreen.cgColor
+            self.updateMask()
+        } completion: { _ in
             // Тактильный отклик
-            feedbackGenerator.impactOccurred()
+            self.feedbackGenerator.impactOccurred()
             
+            // Мигание рамки
             UIView.animate(withDuration: 0.2, animations: {
                 self.scanFrameView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
-                self.scanFrameView.layer.borderColor = UIColor.systemGreen.cgColor
             }) { _ in
                 UIView.animate(withDuration: 0.2) {
                     self.scanFrameView.transform = .identity
+                } completion: { _ in
+                    self.statusLabel.text = "QR-код распознан!"
+                    self.statusLabel.textColor = .systemGreen
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.processScannedQRCode(stringValue)
+                    }
                 }
-            }
-            
-            statusLabel.text = "QR-код распознан!"
-            statusLabel.textColor = .systemGreen
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.processScannedQRCode(stringValue)
             }
         }
     }
@@ -262,7 +290,7 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-            self?.restartScanning()
+            self?.resetScanner()
         })
         present(alert, animated: true)
     }
@@ -282,56 +310,44 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
     private func sendAuthRequest(sessionId: String, login: String, password: String) {
         loadingIndicator.startAnimating()
         
-        let url = URL(string: ApiConfig.Auth.loginQrCode)!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let body: [String: Any] = [
-            "sessionId": sessionId,
-            "login": login,
-            "password": password
-        ]
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        } catch {
-            showErrorAlert(message: "Ошибка формирования запроса")
-            return
-        }
-        
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+        authService.loginWithQR(sessionId: sessionId, login: login, password: password) { [weak self] success in
             DispatchQueue.main.async {
                 self?.loadingIndicator.stopAnimating()
                 
-                if let error = error {
-                    self?.showErrorAlert(message: error.localizedDescription)
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    self?.showErrorAlert(message: "Некорректный ответ сервера")
-                    return
-                }
-                
-                if (200...299).contains(httpResponse.statusCode) {
-                    // Успешная авторизация - просто закрываем сканер
+                if success {
                     self?.onDismiss?()
                 } else {
-                    self?.handleHTTPError(statusCode: httpResponse.statusCode)
+                    self?.showErrorAlert(message: AuthService.shared.errorMessage ?? "Неизвестная ошибка")
+                    self?.resetScanner()
                 }
             }
-        }.resume()
+        }
     }
     
-    private func handleHTTPError(statusCode: Int) {
+    private func handleUnauthorizedError() {
+        showErrorAlert(message: "Неверные учетные данные. Пожалуйста, войдите снова.")
+    }
+    
+    private func handleHTTPError(_ error: Error) {
         let errorMessage: String
-        switch statusCode {
-        case 401: errorMessage = "Неверный логин или пароль"
-        case 403: errorMessage = "Доступ запрещен"
-        case 404: errorMessage = "Сессия не найдена"
-        default: errorMessage = "Ошибка сервера: \(statusCode)"
+        
+        switch error {
+        case NetworkError.unauthorized:
+            errorMessage = "Неверный логин или пароль"
+        case NetworkError.serverError(let statusCode):
+            switch statusCode {
+            case 403: errorMessage = "Доступ запрещен"
+            case 404: errorMessage = "Сессия не найдена"
+            default: errorMessage = "Ошибка сервера: \(statusCode)"
+            }
+        case NetworkError.noData:
+            errorMessage = "Нет данных в ответе"
+        case NetworkError.invalidResponse:
+            errorMessage = "Некорректный ответ сервера"
+        default:
+            errorMessage = error.localizedDescription
         }
+        
         showErrorAlert(message: errorMessage)
     }
     
@@ -342,17 +358,34 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-            self?.restartScanning()
+            self?.resetScanner()
         })
         present(alert, animated: true)
     }
     
-    private func restartScanning() {
-        statusLabel.text = "Поместите QR-код в рамку"
-        statusLabel.textColor = .gray
+    private func resetScanner() {
+        isAnimatingToQR = false
         
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            self?.captureSession.startRunning()
+        // Возвращаем рамку к исходному размеру
+        let frameSize: CGFloat = min(view.frame.width, view.frame.height) * 0.65
+        let originalFrame = CGRect(
+            x: (view.frame.width - frameSize)/2,
+            y: (view.frame.height - frameSize)/2,
+            width: frameSize,
+            height: frameSize
+        )
+        
+        UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.5, options: []) {
+            self.scanFrameView.frame = originalFrame
+            self.scanFrameView.layer.borderColor = UIColor.gray.cgColor
+            self.updateMask()
+        } completion: { _ in
+            self.statusLabel.text = "Поместите QR-код в рамку"
+            self.statusLabel.textColor = .gray
+            
+            DispatchQueue.global(qos: .background).async { [weak self] in
+                self?.captureSession.startRunning()
+            }
         }
     }
 }
