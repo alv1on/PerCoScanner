@@ -69,7 +69,6 @@ class OwnDateService: ObservableObject {
     private func handleNetworkError(_ error: Error) {
         switch error {
         case NetworkError.unauthorized:
-            appState.alertMessage = "Сессия истекла"
             authService.handleUnauthorized()
         default:
             appState.alertMessage = "Ошибка: \(error.localizedDescription)"

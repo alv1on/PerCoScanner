@@ -131,12 +131,14 @@ class AuthService: ObservableObject {
 
     func handleUnauthorized() {
         guard let refreshToken = getKey(refreshTokenKey) else {
+            errorMessage = "Сессия истекла"
             logout()
             return
         }
 
         refreshAccessToken(refreshToken: refreshToken) { [weak self] success in
             if !success {
+                self?.errorMessage = "Сессия истекла"
                 self?.logout()
             }
         }
@@ -163,62 +165,13 @@ class AuthService: ObservableObject {
 
                 switch result {
                 case .success(let (data, response)):
-                    self.processTokenResponse(
-                        data: data, response: response, completion: completion)
+                    self.processLoginResponse(data: data, response: response, login: AuthService.shared.userName, completion: completion)
                 case .failure(let error):
                     self.errorMessage =
                         "Ошибка обновления токена: \(error.localizedDescription)"
                     completion(false)
                 }
             }
-        }
-    }
-
-    private func processTokenResponse(
-        data: Data, response: HTTPURLResponse,
-        completion: @escaping (Bool) -> Void
-    ) {
-        if let setCookieHeader = response.allHeaderFields["Set-Cookie"]
-            as? String
-        {
-            var newAccessToken: String?
-            var newRefreshToken: String?
-
-            // Извлекаем access token
-            if let range = setCookieHeader.range(
-                of: "X-Access-Token=([^;]+)", options: .regularExpression)
-            {
-                newAccessToken = String(
-                    setCookieHeader[range].dropFirst("X-Access-Token=".count))
-            }
-
-            // Извлекаем refresh token
-            if let range = setCookieHeader.range(
-                of: "X-Refresh-Token=([^;]+)", options: .regularExpression)
-            {
-                newRefreshToken = String(
-                    setCookieHeader[range].dropFirst("X-Refresh-Token=".count))
-            }
-
-            guard let accessToken = newAccessToken,
-                let refreshToken = newRefreshToken
-            else {
-                errorMessage = "Токены не найдены в ответе"
-                completion(false)
-                return
-            }
-
-            if self.saveKey(accessToken, keyValue: tokenKey)
-                && self.saveKey(refreshToken, keyValue: refreshTokenKey)
-            {
-                completion(true)
-            } else {
-                errorMessage = "Ошибка сохранения токенов"
-                completion(false)
-            }
-        } else {
-            errorMessage = "Не удалось получить токены из заголовков"
-            completion(false)
         }
     }
 
@@ -429,61 +382,12 @@ class AuthService: ObservableObject {
 
                 switch result {
                 case .success(let (data, response)):
-                    self.processQRLoginResponse(
-                        data: data, response: response, completion: completion)
+                    self.processLoginResponse(data: data, response: response, login: login, completion: completion)
                 case .failure(let error):
                     self.handleQRLoginError(error)
                     completion(false)
                 }
             }
-        }
-    }
-
-    private func processQRLoginResponse(
-        data: Data, response: HTTPURLResponse,
-        completion: @escaping (Bool) -> Void
-    ) {
-        if let setCookieHeader = response.allHeaderFields["Set-Cookie"]
-            as? String
-        {
-            var accessToken: String?
-            var refreshToken: String?
-
-            // Извлекаем access token
-            if let range = setCookieHeader.range(
-                of: "X-Access-Token=([^;]+)", options: .regularExpression)
-            {
-                accessToken = String(
-                    setCookieHeader[range].dropFirst("X-Access-Token=".count))
-            }
-
-            // Извлекаем refresh token
-            if let range = setCookieHeader.range(
-                of: "X-Refresh-Token=([^;]+)", options: .regularExpression)
-            {
-                refreshToken = String(
-                    setCookieHeader[range].dropFirst("X-Refresh-Token=".count))
-            }
-
-            guard let accessToken = accessToken, let refreshToken = refreshToken
-            else {
-                self.errorMessage = "Токены не найдены"
-                completion(false)
-                return
-            }
-
-            if self.saveKey(accessToken, keyValue: tokenKey)
-                && self.saveKey(refreshToken, keyValue: refreshTokenKey)
-            {
-                self.isAuthenticated = true
-                self.fetchUserInfo(completion: completion)
-            } else {
-                self.errorMessage = "Ошибка сохранения токенов"
-                completion(false)
-            }
-        } else {
-            self.errorMessage = "Токены не найдены в заголовках"
-            completion(false)
         }
     }
 
@@ -510,7 +414,6 @@ class AuthService: ObservableObject {
         if let networkError = error as? NetworkError {
             switch networkError {
             case .unauthorized:
-                errorMessage = "Сессия истекла"
                 handleUnauthorized()
             case .serverError(let code):
                 errorMessage = "Ошибка сервера: \(code)"

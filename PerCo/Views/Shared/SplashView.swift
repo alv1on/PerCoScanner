@@ -34,7 +34,8 @@ struct SplashView: View {
                         
                         VStack(spacing: 4) {
                             Text("PerCo Time Tracker")
-                            Text("Copyright © 2020-\(Calendar.current.component(.year, from: Date()))")
+                            let currentYear = Calendar.current.component(.year, from: Date())
+                            Text("Copyright © 2020-\(String(format: "%04d", currentYear))")
                         }
                         .font(.caption)
                         .foregroundColor(.gray)
